@@ -15,13 +15,14 @@ waffiy/
 │   │   ├── welcome.tsx                   # accueil marketing
 │   │   ├── role.tsx                      # inscription — choix du rôle
 │   │   ├── role-login.tsx                # connexion — choix du rôle
-│   │   ├── login.tsx                     # email + mot de passe (les deux rôles)
+│   │   ├── login.tsx                     # saisie de l'email (les deux rôles)
+│   │   ├── verify.tsx                    # code à 6 chiffres reçu par email
 │   │   ├── signup-client.tsx             # étape 1 sur 2
 │   │   └── signup-merchant/              # étapes 1 à 3
 │   │       ├── _layout.tsx               # porte l'état du formulaire multi-étapes
 │   │       ├── commerce.tsx              # logo, nom, catégorie, ville, téléphone
 │   │       ├── programme.tsx             # seuil, aperçu client, récompense
-│   │       └── compte.tsx                # identifiants du propriétaire
+│   │       └── compte.tsx                # email du propriétaire + vérification
 │   │
 │   ├── (client)/
 │   │   ├── _layout.tsx                   # garde : session + carte(s) ; barre d'onglets
@@ -53,8 +54,7 @@ waffiy/
 │       │   ├── index.tsx                 # mes programmes
 │       │   ├── new.tsx
 │       │   └── [id].tsx                  # édition + avertissement de seuil
-│       ├── enroll-qr.tsx                 # QR d'inscription clients
-│       └── team.tsx                      # équipe — sous réserve de Q3
+│       └── enroll-qr.tsx                 # QR d'inscription clients
 │
 ├── src/
 │   ├── components/

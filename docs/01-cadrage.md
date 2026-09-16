@@ -64,9 +64,9 @@ Note : `expo-barcode-scanner` est obsolète, le scan passe par `CameraView` d'`e
 
 ## 2. Contradictions et ambiguïtés relevées
 
-Elles sont classées par gravité. Les quatre premières bloquent la conception de la base de données.
+Classées par gravité. Celles marquées ✅ ont été tranchées, voir § 3.
 
-### C1 — Vérification par SMS contre palier gratuit 🔴 bloquant
+### C1 — Vérification par SMS contre palier gratuit — ✅ résolu (Q1)
 
 Le design annonce « Un code de vérification sera envoyé par SMS au numéro indiqué ». L'authentification
 par téléphone de Supabase délègue à un fournisseur SMS externe — Twilio, MessageBird, Vonage — et
@@ -75,7 +75,7 @@ palier gratuit ».
 
 Trois issues possibles, détaillées dans la question Q1.
 
-### C2 — Le client a besoin d'une caméra, absente de la liste d'écrans 🔴 bloquant
+### C2 — Le client a besoin d'une caméra, absente de la liste d'écrans 🔴 ouvert (Q5)
 
 Le cahier des charges ne donne pas d'écran de scan au client. Mais l'état vide du design affiche
 « Scannez le QR code Waffiy d'un commerce » avec un bouton **« Scanner un commerce → »**, et le
@@ -87,7 +87,7 @@ Il y a donc **deux QR qui circulent en sens inverse** :
 
 Le second écran manque à la liste. Sans lui, un client ne peut jamais obtenir sa première carte.
 
-### C3 — Le QR client est statique et porte des données personnelles 🔴 sécurité
+### C3 — Le QR client est statique et porte des données personnelles — ✅ résolu (Q4)
 
 Le prototype encode `WFY:CUST:4182-0093:SARAH-BENALI`. Deux problèmes :
 
@@ -99,7 +99,7 @@ Le prototype encode `WFY:CUST:4182-0093:SARAH-BENALI`. Deux problèmes :
 
 Voir la question Q4.
 
-### C4 — Exclusivité des rôles : le cahier des charges contredit le design 🔴 bloquant
+### C4 — Exclusivité des rôles : le cahier des charges contredit le design — ✅ résolu (Q2)
 
 - Cahier des charges : « Deux rôles dans une seule application, **séparés à la connexion** ».
 - Design, écran de choix du rôle : « Un compte client peut créer un commerce plus tard depuis son
@@ -139,7 +139,7 @@ avancée ». Deux lectures :
 Le prototype tranche pour le **ratio** (`stamps/threshold`). C'est le bon choix métier — on propose le
 programme le plus proche de la récompense — mais je le confirme plutôt que de le supposer.
 
-### C7 — L'attribution au personnel suppose une équipe, hors périmètre annoncé 🟡
+### C7 — L'attribution au personnel suppose une équipe — ✅ tranché (Q3), avec une conséquence
 
 La règle 5 impose que chaque action soit « attribuée à un membre du personnel », et l'historique du
 design affiche bien « Karim », « Amina ». L'écran Réglages liste « **Équipe — 3 membres** ». Mais la
@@ -168,24 +168,43 @@ de transactions. L'historique « Mes récompenses utilisées » est une simple l
 
 ---
 
-## 3. Questions ouvertes
+## 3. Décisions prises (validées le 16/09/2026)
 
-Les quatre premières bloquent le schéma de base de données. Les suivantes peuvent être tranchées plus tard.
+| # | Question | Décision | Contradiction résolue |
+|---|---|---|---|
+| Q1 | Authentification | **Code à usage unique par email**, sans mot de passe | C1 — plus de dépendance SMS payante |
+| Q2 | Rôles | **Capacité dérivée** : tout compte est client, commerçant s'il possède un commerce | C4 — le design l'emporte sur le cahier des charges |
+| Q3 | Équipe | **Supprimée.** Un commerce = un compte | C7 — mais crée une nouvelle contradiction, ci-dessous |
+| Q4 | QR client | **Code aléatoire statique, sans nom ni identifiant séquentiel** | C3 — énumération et fuite de données écartées ; le rejeu reste couvert par le délai anti-fraude |
 
-**Q1 — Authentification.** Email + mot de passe uniquement, ou téléphone avec OTP SMS ? Le SMS est
-payant (C1). Options : (a) email/mot de passe, téléphone conservé comme simple champ de profil non
-vérifié ; (b) OTP par email — gratuit, mais l'UX de saisie d'email en caisse est mauvaise ;
-(c) prévoir le téléphone dès maintenant et brancher un fournisseur SMS payant plus tard.
+### ⚠️ Nouvelle contradiction créée par la décision Q3
 
-**Q2 — Rôles.** Un compte peut-il être client **et** commerçant (design), ou les rôles sont-ils
-exclusifs (cahier des charges) ? Cela détermine si `role` est une colonne ou une capacité dérivée.
+La suppression de l'équipe **invalide la règle métier 5** de votre cahier des charges : « toute action
+est horodatée, **attribuée à un membre du personnel**, et génère une notification ». L'horodatage et
+la notification restent ; l'attribution disparaît de l'interface.
 
-**Q3 — Équipe.** La phase 1 contient-elle l'invitation de membres du personnel, ou le propriétaire
-est-il le seul compte, l'attribution pointant toujours vers lui ?
+Effets concrets, pour qu'ils soient explicites :
+- l'historique de la fiche client perd sa colonne « Karim / Amina » visible dans le prototype ;
+- l'entrée « Équipe — 3 membres » disparaît de l'écran Réglages commerçant ;
+- plusieurs personnes en caisse partageront le même compte, donc la même session.
 
-**Q4 — QR client.** QR statique simple, ou jeton signé tournant (change toutes les 30 secondes,
-calculé hors ligne à partir d'un secret d'appareil, vérifié côté serveur) ? Le second protège du rejeu
-et fonctionne sans réseau côté client, au prix d'environ une demi-journée de travail.
+Ce que je conserve malgré tout : une colonne `transactions.actor_profile_id`, **purement technique et
+jamais affichée**, qui enregistre le compte à l'origine de l'action. Elle vaut toujours le
+propriétaire en phase 1, mais elle évite de devoir migrer le registre le jour où le back-office super
+admin devra enquêter sur une fraude, ou le jour où vous réintroduiriez une équipe.
+
+### Conséquence de la décision Q1 sur le palier gratuit
+
+Le serveur d'email intégré à Supabase est bridé à quelques envois par heure et réservé au
+développement. Une connexion par code échouerait dès les premiers utilisateurs réels. Il faut donc
+brancher un **SMTP externe gratuit** dès l'étape 2 — je recommande **Brevo, 300 emails par jour, en
+permanence**. C'est une configuration dans le tableau de bord Supabase, aucun code mobile concerné.
+
+---
+
+## 4. Questions ouvertes restantes
+
+Q1 à Q4 sont tranchées ci-dessus. Restent celles qui n'engagent pas le schéma :
 
 **Q5 — Inscription à un commerce.** Le client rejoint-il un commerce en scannant le QR du commerce,
 ou le commerçant l'inscrit-il en scannant le QR du client d'un inconnu (création à la volée) ?
@@ -203,7 +222,8 @@ seulement à celui qui est crédité ?
 immuable, cela se fait par une transaction compensatoire de type `adjust`. À prévoir ou non.
 
 **Q9 — Multi-commerce.** Un même compte peut-il gérer plusieurs commerces (une chaîne) ? Le modèle le
-permet naturellement via la table `merchant_staff` ; la question porte sur l'UI (sélecteur de commerce).
+permet naturellement — un compte peut être `owner_id` de plusieurs commerces ; la question porte
+sur l'interface (sélecteur de commerce dans la barre du haut).
 
 **Q10 — Langue.** L'écran profil propose « Langue — Français ». Y aura-t-il de l'arabe ou de l'anglais ?
 Cela change le choix d'une bibliothèque i18n dès le socle, et l'arabe imposerait la gestion du RTL.

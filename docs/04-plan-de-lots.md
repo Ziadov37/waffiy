@@ -17,6 +17,7 @@ Légende : ⬜ à faire · 🟦 en cours · ✅ fait
 | 1.4 | Modèle de données complet | ✅ |
 | 1.5 | Arborescence de fichiers et conventions | ✅ |
 | 1.6 | Ce plan de lots | ✅ |
+| 1.7 | Arbitrage des 4 questions bloquantes et propagation dans les documents | ✅ |
 
 ---
 
@@ -24,14 +25,15 @@ Légende : ⬜ à faire · 🟦 en cours · ✅ fait
 
 | # | Tâche | Livrable |
 |---|---|---|
+| 2.0 | Configurer un SMTP gratuit (Brevo) pour les codes de connexion par email | réglage projet |
 | 2.1 | Initialiser Supabase local (`supabase init`), `config.toml` | commit |
 | 2.2 | Migration `0001` — types énumérés et extensions | commit |
 | 2.3 | Migration `0002` — `profiles` + déclencheur sur `auth.users` + génération du `public_code` | commit |
-| 2.4 | Migration `0003` — `merchants`, `merchant_staff`, contrainte « au moins un propriétaire » | commit |
+| 2.4 | Migration `0003` — `merchants` (`owner_id`, `join_code`, `timezone`, délai anti-fraude) | commit |
 | 2.5 | Migration `0004` — `programs`, `memberships`, `program_progress` | commit |
 | 2.6 | Migration `0005` — `transactions` (append-only), index, clé d'idempotence | commit |
 | 2.7 | Migration `0006` — `notifications`, `push_tokens`, `app_settings` + valeurs initiales | commit |
-| 2.8 | Migration `0007` — assistants RLS `auth_is_staff_of`, `auth_is_platform_admin` | commit |
+| 2.8 | Migration `0007` — assistants RLS `auth_is_merchant_operator`, `auth_is_platform_admin` | commit |
 | 2.9 | Migration `0008` — **toutes les politiques RLS, commentées ligne à ligne** | commit |
 | 2.10 | Migration `0009` — `credit_visit` (idempotence, verrou, anti-fraude, notifications) | commit |
 | 2.11 | Migration `0010` — `redeem_reward` (conservation du surplus) | commit |
@@ -68,11 +70,11 @@ la progression d'un autre client, ni consommer une récompense. Prouvé par un t
 |---|---|
 | 4.1 | Écran `welcome` conforme au design |
 | 4.2 | Écrans de choix de rôle (inscription et connexion) |
-| 4.3 | Connexion email + mot de passe, erreurs en français |
+| 4.3 | Connexion par code à usage unique : saisie email → champ à 6 chiffres, renvoi, erreurs en français |
 | 4.4 | Inscription client (2 étapes) + création du profil |
 | 4.5 | Inscription commerçant étape 1 — commerce et catégorie |
 | 4.6 | Inscription commerçant étape 2 — premier programme avec aperçu client |
-| 4.7 | Inscription commerçant étape 3 — compte propriétaire, création transactionnelle |
+| 4.7 | Inscription commerçant étape 3 — email du propriétaire, vérification, création transactionnelle |
 | 4.8 | Gestion de session : reprise, rafraîchissement, déconnexion |
 | 4.9 | Gardes de route et redirection selon le rôle |
 | 4.10 | Téléversement du logo vers Storage |
@@ -116,7 +118,7 @@ la progression d'un autre client, ni consommer une récompense. Prouvé par un t
 | 6.13 | Liste des programmes + création |
 | 6.14 | Édition d'un programme + **avertissement de changement de seuil** (règle 4) |
 | 6.15 | Écran « QR d'inscription » + impression et partage |
-| 6.16 | Réglages du commerce |
+| 6.16 | Réglages du commerce (sans entrée « Équipe » — voir décision Q3) |
 
 ---
 
