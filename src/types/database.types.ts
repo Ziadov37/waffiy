@@ -204,6 +204,13 @@ export type Database = {
             foreignKeyName: "notifications_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
+            referencedRelation: "merchant_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
@@ -494,6 +501,49 @@ export type Database = {
       }
     }
     Views: {
+      merchant_activity: {
+        Row: {
+          created_at: string | null
+          delta: number | null
+          first_name: string | null
+          id: string | null
+          kind: Database["public"]["Enums"]["transaction_kind"] | null
+          last_name: string | null
+          merchant_id: string | null
+          profile_id: string | null
+          program_emoji: string | null
+          program_id: string | null
+          program_name: string | null
+          reward_label: string | null
+          source: string | null
+          stamps_after: number | null
+          stamps_before: number | null
+          threshold_at_time: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merchant_customers: {
         Row: {
           avatar_url: string | null
@@ -597,6 +647,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      merchant_day_bounds: {
+        Args: { p_merchant: string }
+        Returns: {
+          day_end: string
+          day_start: string
+        }[]
+      }
+      merchant_stats: {
+        Args: { p_merchant: string }
+        Returns: {
+          customers_count: number
+          returning_rate: number
+          rewards_this_month: number
+          scans_today: number
+        }[]
       }
       program_threshold_impact: {
         Args: { p_program_id: string; p_threshold: number }
