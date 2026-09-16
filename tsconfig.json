@@ -1,0 +1,29 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+
+    // Au-delà de « strict » — ces trois options attrapent des classes d'erreurs
+    // que strict laisse passer, et qui coûtent cher en production mobile.
+    //
+    // noUncheckedIndexedAccess : cards[0] est typé Card | undefined. Sans lui,
+    // un tableau vide provoque un plantage à l'exécution sur un écran client.
+    "noUncheckedIndexedAccess": true,
+    // exactOptionalPropertyTypes : distingue « absent » de « présent et undefined ».
+    // Décisif pour les mises à jour partielles envoyées à Supabase.
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/assets/*": ["./assets/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules", "supabase/functions"]
+}
