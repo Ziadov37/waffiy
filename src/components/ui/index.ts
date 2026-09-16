@@ -8,3 +8,5 @@ export { Avatar, type AvatarProps } from './Avatar';
 export { Badge } from './Badge';
 export { Icon, type IconName } from './Icon';
 export { TabBar, type TabItem, type CenterAction } from './TabBar';
+export { AppBar } from './AppBar';
+export { OptionCard, type OptionCardProps } from './OptionCard';

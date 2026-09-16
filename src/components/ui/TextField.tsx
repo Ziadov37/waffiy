@@ -4,6 +4,7 @@ import {
   TextInput,
   View,
   type TextInputProps,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
 
@@ -16,6 +17,8 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   hint?: string | undefined;
   optional?: boolean;
   containerStyle?: ViewStyle;
+  /** Surcharge du champ lui-même — code à usage unique, montants. */
+  inputStyle?: TextStyle;
 };
 
 export function TextField({
@@ -24,6 +27,7 @@ export function TextField({
   hint,
   optional = false,
   containerStyle,
+  inputStyle,
   ...rest
 }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
@@ -56,6 +60,7 @@ export function TextField({
                 ? colors.primary
                 : colors.borderInput,
           },
+          inputStyle,
         ]}
       />
 
