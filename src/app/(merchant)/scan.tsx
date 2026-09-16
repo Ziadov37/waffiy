@@ -1,0 +1,10 @@
+import { Screen, Text } from '@/components/ui';
+
+export default function MerchantScan() {
+  return (
+    <Screen>
+      <Text variant="title">scan</Text>
+      <Text tone="secondary">Écran commerçant — implémenté à l’étape 6.</Text>
+    </Screen>
+  );
+}
