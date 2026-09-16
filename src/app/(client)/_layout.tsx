@@ -1,10 +1,15 @@
 import { Redirect, Stack } from 'expo-router';
 
 import { useSession } from '@/features/auth/hooks';
+import { useClientRealtime } from '@/features/cards/realtime';
 import { colors } from '@/theme';
 
 export default function ClientLayout() {
   const session = useSession();
+
+  // Abonné une seule fois pour tout le parcours client : chaque écran
+  // consomme ensuite le cache, déjà à jour.
+  useClientRealtime();
 
   // Garde de route. La RLS protège déjà les données ; cette garde évite
   // seulement d'afficher des écrans vides à un utilisateur déconnecté.
