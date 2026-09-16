@@ -537,6 +537,42 @@ export type Database = {
         Returns: boolean
       }
       auth_is_platform_admin: { Args: never; Returns: boolean }
+      create_merchant: {
+        Args: {
+          p_border_color?: string
+          p_category: Database["public"]["Enums"]["merchant_category"]
+          p_city: string
+          p_logo_url?: string
+          p_name: string
+          p_phone?: string
+          p_program_description?: string
+          p_program_emoji?: string
+          p_program_name: string
+          p_surface_color?: string
+          p_threshold: number
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["merchant_category"]
+          city: string
+          created_at: string
+          id: string
+          join_code: string
+          logo_url: string | null
+          min_credit_interval_seconds: number | null
+          name: string
+          owner_id: string
+          phone: string | null
+          status: Database["public"]["Enums"]["merchant_status"]
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "merchants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       credit_visit: {
         Args: {
           p_client_code: string
