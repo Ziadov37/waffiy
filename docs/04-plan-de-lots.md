@@ -21,28 +21,29 @@ Légende : ⬜ à faire · 🟦 en cours · ✅ fait
 
 ---
 
-## Étape 2 — Base de données
+## Étape 2 — Base de données ✅
 
 | # | Tâche | Livrable |
 |---|---|---|
-| 2.0 | Configurer un SMTP gratuit (Brevo) pour les codes de connexion par email | réglage projet |
-| 2.1 | Initialiser Supabase local (`supabase init`), `config.toml` | commit |
-| 2.2 | Migration `0001` — types énumérés et extensions | commit |
-| 2.3 | Migration `0002` — `profiles` + déclencheur sur `auth.users` + génération du `public_code` | commit |
-| 2.4 | Migration `0003` — `merchants` (`owner_id`, `join_code`, `timezone`, délai anti-fraude) | commit |
-| 2.5 | Migration `0004` — `programs`, `memberships`, `program_progress` | commit |
-| 2.6 | Migration `0005` — `transactions` (append-only), index, clé d'idempotence | commit |
-| 2.7 | Migration `0006` — `notifications`, `push_tokens`, `app_settings` + valeurs initiales | commit |
-| 2.8 | Migration `0007` — assistants RLS `auth_is_merchant_operator`, `auth_is_platform_admin` | commit |
-| 2.9 | Migration `0008` — **toutes les politiques RLS, commentées ligne à ligne** | commit |
-| 2.10 | Migration `0009` — `credit_visit` (idempotence, verrou, anti-fraude, notifications) | commit |
-| 2.11 | Migration `0010` — `redeem_reward` (conservation du surplus) | commit |
-| 2.12 | Migration `0011` — `join_merchant` (seule voie d'inscription), `resolve_client_for_scan`, `set_program_threshold` | commit |
-| 2.13 | `seed.sql` — Burger House, Coffee Lab, Beauty Studio, Sarah et 4 clients, historique | commit |
-| 2.14 | Tests SQL (pgTAP ou script) : les 7 règles métier vérifiées une par une | commit |
+| 2.0 | Configurer un SMTP gratuit (Brevo) pour les codes de connexion par email | ⬜ à faire côté tableau de bord Supabase |
+| 2.1 | Initialiser Supabase local (`supabase init`), `config.toml` | ✅ |
+| 2.2 | Migration `0001` — types énumérés et extensions | ✅ |
+| 2.3 | Migration `0002` — `profiles` + déclencheur sur `auth.users` + génération du `public_code` | ✅ |
+| 2.4 | Migration `0003` — `merchants` (`owner_id`, `join_code`, `timezone`, délai anti-fraude) | ✅ |
+| 2.5 | Migration `0004` — `programs`, `memberships`, `program_progress` | ✅ |
+| 2.6 | Migration `0005` — `transactions` (append-only), index, clé d'idempotence | ✅ |
+| 2.7 | Migration `0006` — `notifications`, `push_tokens`, `app_settings` + valeurs initiales | ✅ |
+| 2.8 | Migration `0007` — assistants RLS `auth_is_merchant_operator`, `auth_is_platform_admin` | ✅ |
+| 2.9 | Migration `0008` — **toutes les politiques RLS, commentées ligne à ligne** | ✅ |
+| 2.10 | Migration `0009` — `credit_visit` (idempotence, verrou, anti-fraude, notifications) | ✅ |
+| 2.11 | Migration `0010` — `redeem_reward` (conservation du surplus) | ✅ |
+| 2.12 | Migration `0011` — `join_merchant` (seule voie d'inscription), `resolve_client_for_scan`, `set_program_threshold` | ✅ |
+| 2.13 | `seed.sql` — Burger House, Coffee Lab, Beauty Studio, Sarah et 4 clients, historique | ✅ |
+| 2.14 | Tests SQL (pgTAP ou script) : les 7 règles métier vérifiées une par une | ✅ |
 
-**Critère de sortie :** un client qui utilise la clé anonyme ne peut ni s'ajouter une visite, ni lire
-la progression d'un autre client, ni consommer une récompense. Prouvé par un test.
+**Critère de sortie — atteint.** 62 tests passent : un client muni de la clé anonyme ne peut ni
+s'ajouter une visite (R1a), ni écrire au registre (R1b), ni gonfler son solde (R1c), ni lire la
+progression d'un autre (I1), ni consommer une récompense. Lancer : `supabase/tests/run.sh`.
 
 ---
 
