@@ -28,7 +28,7 @@ create table public.profiles (
   -- ni nom, ni suite prévisible. 31^10 ≈ 8,2 × 10^14 combinaisons, ce qui
   -- rend l'énumération de la base de clients sans intérêt.
   public_code text not null unique
-    check (public_code ~ '^[2-9A-HJ-NP-Z]{10}$'),
+    check (public_code ~ '^[2-9A-HJKMNP-Z]{10}$'),
 
   locale text not null default 'fr'
     check (locale in ('fr', 'ar', 'en')),

@@ -25,7 +25,7 @@ create table public.merchants (
   -- Charge utile du QR d'inscription affiché en vitrine. C'est l'unique voie
   -- d'entrée vers une carte de fidélité (décision D5).
   join_code text not null unique
-    check (join_code ~ '^[2-9A-HJ-NP-Z]{8}$'),
+    check (join_code ~ '^[2-9A-HJKMNP-Z]{8}$'),
 
   status public.merchant_status not null default 'active',
 
