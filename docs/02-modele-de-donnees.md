@@ -17,6 +17,8 @@ voir § 9.
 | D2 | **Le rôle est une capacité dérivée**, pas une colonne | Pas de `profiles.role` ; commerçant ⇔ `merchants.owner_id = auth.uid()` |
 | D3 | **Code client aléatoire et statique, sans donnée personnelle** | `profiles.public_code`, 10 caractères aléatoires ; le QR ne porte que ce code |
 | D4 | **Pas de gestion d'équipe** | Pas de table `merchant_staff` ; `merchants.owner_id` ; `transactions.actor_profile_id` en audit seul |
+| D5 | **Inscription uniquement par scan du QR du commerce par le client** | `join_merchant()` est la seule création de `memberships` ; `credit_visit()` refuse un non-inscrit |
+| D6 | **Inscription à tous les programmes actifs d'un coup** | `join_merchant()` crée une ligne `program_progress` par programme `active` |
 
 ---
 
@@ -276,7 +278,8 @@ auth_is_platform_admin()          → boolean      -- crochet phase 2
 3. vérifie `programs.status = 'active'` et `merchants.status = 'active'` (C8) ;
 4. **idempotence** : si une transaction porte déjà `p_request_id`, elle est renvoyée telle quelle,
    sans second crédit ;
-5. crée `membership` et `program_progress` si absents (première visite en caisse, Q5) ;
+5. **exige une `membership` existante** → sinon `NOT_ENROLLED` (D5) ; crée la ligne
+   `program_progress` si elle manque, cas d'un programme publié après l'inscription du client ;
 6. `select … for update` sur la ligne de progression ;
 7. **anti-fraude** : si `now() - last_credit_at < intervalle` → `RATE_LIMITED` avec le temps restant ;
 8. insère la transaction, met à jour le solde, met à jour `membership.last_activity_at` ;
@@ -297,12 +300,24 @@ Mêmes contrôles d'accès et même idempotence, puis :
 
 ### `join_merchant(p_join_code text)`
 
-Appelée par le **client** quand il scanne le QR de la vitrine. Crée la `membership` et une ligne de
-`program_progress` pour chaque programme `active` (sous réserve de Q6). Idempotente.
+**Seule voie de création d'une carte** (D5). Appelée par le **client** lui-même, jamais par le
+commerçant, quand il scanne le QR de la vitrine. Elle :
+
+1. résout le commerce depuis `join_code`, refuse si `status <> 'active'` ;
+2. crée la `membership` — idempotente : rescanner le même QR ne crée pas de doublon et ne
+   réinitialise pas `joined_at` ;
+3. crée une ligne `program_progress` à 0 pour **chaque** programme `active` du commerce (D6) ;
+4. renvoie la carte complète, pour que l'application l'affiche immédiatement après le scan.
+
+C'est `auth.uid()` qui détermine le client : un commerçant ne peut donc inscrire personne à sa place.
+
+Note : un programme créé **après** l'inscription du client n'a pas de ligne de progression. Elle est
+créée à la volée par `credit_visit`, et les lectures traitent l'absence de ligne comme un solde de 0.
 
 ### `resolve_client_for_scan(p_client_code text, p_merchant uuid)`
 
-Renvoie une **vue restreinte** du client scanné : prénom, initiales, date d'adhésion, et la
+Renvoie une **vue restreinte** du client scanné : prénom, initiales, date d'adhésion, un drapeau
+`is_enrolled` (D5 — l'application affiche « ce client n'a pas encore votre carte » s'il est faux), et la
 progression sur chaque programme actif du commerce, triée par ratio `stamps/threshold` décroissant
 (C6). Ne renvoie ni téléphone, ni email, ni les commerces concurrents. Protégée par le délai
 anti-fraude sur les appels répétés, pour ne pas devenir un oracle d'énumération.

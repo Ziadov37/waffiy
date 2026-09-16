@@ -75,7 +75,7 @@ palier gratuit ».
 
 Trois issues possibles, détaillées dans la question Q1.
 
-### C2 — Le client a besoin d'une caméra, absente de la liste d'écrans 🔴 ouvert (Q5)
+### C2 — Le client a besoin d'une caméra, absente de la liste d'écrans — ✅ résolu (Q5)
 
 Le cahier des charges ne donne pas d'écran de scan au client. Mais l'état vide du design affiche
 « Scannez le QR code Waffiy d'un commerce » avec un bouton **« Scanner un commerce → »**, et le
@@ -85,7 +85,9 @@ Il y a donc **deux QR qui circulent en sens inverse** :
 - le QR **du client**, que le commerçant scanne pour créditer
 - le QR **du commerce**, que le client scanne pour s'inscrire au programme
 
-Le second écran manque à la liste. Sans lui, un client ne peut jamais obtenir sa première carte.
+Le second écran manquait à la liste. Sans lui, un client ne pouvait jamais obtenir sa première carte.
+**L'écran `(client)/scan-merchant.tsx` est donc ajouté au périmètre** — c'est l'unique porte d'entrée
+vers une nouvelle carte.
 
 ### C3 — Le QR client est statique et porte des données personnelles — ✅ résolu (Q4)
 
@@ -176,6 +178,20 @@ de transactions. L'historique « Mes récompenses utilisées » est une simple l
 | Q2 | Rôles | **Capacité dérivée** : tout compte est client, commerçant s'il possède un commerce | C4 — le design l'emporte sur le cahier des charges |
 | Q3 | Équipe | **Supprimée.** Un commerce = un compte | C7 — mais crée une nouvelle contradiction, ci-dessous |
 | Q4 | QR client | **Code aléatoire statique, sans nom ni identifiant séquentiel** | C3 — énumération et fuite de données écartées ; le rejeu reste couvert par le délai anti-fraude |
+| Q5 | Inscription à un commerce | **Uniquement par scan du QR du commerce par le client.** La carte du commerce apparaît alors dans « Mes cartes » | C2 — l'écran de scan client est confirmé nécessaire |
+| Q6 | Programmes à l'inscription | **Tous les programmes actifs d'un coup.** La carte porte le commerce, pas le programme | cohérent avec « 3 programmes » affiché sur la carte du prototype |
+
+### Conséquence de la décision Q5 — première visite en caisse
+
+L'inscription passe **exclusivement** par le client qui scanne le QR du commerce. Le commerçant ne
+peut donc pas inscrire un inconnu en le scannant : `credit_visit` refusera avec `NOT_ENROLLED`.
+
+Effet concret : à la toute première visite, le commerçant scanne, l'écran affiche « Ce client n'a pas
+encore votre carte » et propose un bouton qui ouvre directement son QR d'inscription. Le client le
+scanne, puis le commerçant scanne à nouveau. **Deux scans au lieu d'un, une seule fois par client.**
+
+C'est le prix d'une règle simple et d'un consentement explicite du client à rejoindre le programme —
+personne ne se retrouve inscrit quelque part sans l'avoir voulu.
 
 ### ⚠️ Nouvelle contradiction créée par la décision Q3
 
@@ -204,16 +220,7 @@ permanence**. C'est une configuration dans le tableau de bord Supabase, aucun co
 
 ## 4. Questions ouvertes restantes
 
-Q1 à Q4 sont tranchées ci-dessus. Restent celles qui n'engagent pas le schéma :
-
-**Q5 — Inscription à un commerce.** Le client rejoint-il un commerce en scannant le QR du commerce,
-ou le commerçant l'inscrit-il en scannant le QR du client d'un inconnu (création à la volée) ?
-Le design semble vouloir les deux. Je recommande les deux : QR commerce pour l'affiche en vitrine,
-création à la volée pour ne jamais bloquer une première visite en caisse.
-
-**Q6 — Inscription automatique aux programmes.** Quand un client rejoint un commerce qui propose
-3 programmes, est-il inscrit aux 3 d'un coup (le design affiche « 3 programmes » sur la carte), ou
-seulement à celui qui est crédité ?
+Q1 à Q6 sont tranchées ci-dessus. Restent celles qui n'engagent pas le schéma :
 
 **Q7 — Nombre de visites par scan.** Toujours +1, ou le commerçant peut-il créditer plusieurs visites
 (commande de 3 burgers) ? Le prototype ne propose que +1.

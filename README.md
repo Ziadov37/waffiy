@@ -25,6 +25,8 @@ Le design de référence est le bundle `Waffiy App.html`, décompressé pour con
 - **Le rôle est une capacité dérivée** : tout compte est client, et devient commerçant dès qu'il
   possède un commerce. Un même compte peut donc porter les deux.
 - **Le QR client ne contient qu'un code aléatoire**, ni nom ni identifiant séquentiel.
+- **Un client obtient sa carte en scannant le QR du commerce**, et lui seul. Il est alors inscrit à
+  tous les programmes actifs de ce commerce d'un coup.
 - **Pas de gestion d'équipe** : un commerce égale un compte. Cette décision écarte l'attribution des
   actions à un membre du personnel prévue par la règle métier 5 ; voir `docs/01-cadrage.md` § 3.
 

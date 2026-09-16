@@ -37,7 +37,7 @@ Légende : ⬜ à faire · 🟦 en cours · ✅ fait
 | 2.9 | Migration `0008` — **toutes les politiques RLS, commentées ligne à ligne** | commit |
 | 2.10 | Migration `0009` — `credit_visit` (idempotence, verrou, anti-fraude, notifications) | commit |
 | 2.11 | Migration `0010` — `redeem_reward` (conservation du surplus) | commit |
-| 2.12 | Migration `0011` — `join_merchant`, `resolve_client_for_scan`, `set_program_threshold` | commit |
+| 2.12 | Migration `0011` — `join_merchant` (seule voie d'inscription), `resolve_client_for_scan`, `set_program_threshold` | commit |
 | 2.13 | `seed.sql` — Burger House, Coffee Lab, Beauty Studio, Sarah et 4 clients, historique | commit |
 | 2.14 | Tests SQL (pgTAP ou script) : les 7 règles métier vérifiées une par une | commit |
 
@@ -90,7 +90,7 @@ la progression d'un autre client, ni consommer une récompense. Prouvé par un t
 | 5.3 | Liste « Mes cartes » + état vide |
 | 5.4 | Détail de carte + sélecteur d'autres programmes du commerce |
 | 5.5 | QR plein écran + élévation de luminosité + accès en un appui depuis la barre d'onglets |
-| 5.6 | Scanner le QR d'un commerce → `join_merchant` (écran ajouté, voir C2) |
+| 5.6 | Scanner le QR d'un commerce → `join_merchant` → la carte apparaît (unique voie d'inscription) |
 | 5.7 | Écran « Récompense débloquée » |
 | 5.8 | « Mes récompenses » — disponibles + historique |
 | 5.9 | Liste des notifications + compteur de non-lues |
@@ -108,6 +108,7 @@ la progression d'un autre client, ni consommer une récompense. Prouvé par un t
 | 6.3 | Écran caméra (`CameraView`), cadre de visée, retour haptique |
 | 6.4 | Recherche manuelle par code client (repli hors caméra) |
 | 6.5 | Écran « Client identifié » + sélection du programme le plus avancé |
+| 6.5b | État « Client non inscrit » → bouton d'ouverture directe du QR d'inscription |
 | 6.6 | Modale de confirmation d'ajout + appel `credit_visit` |
 | 6.7 | Écran « Récompense disponible » + « Plus tard » |
 | 6.8 | Modale de confirmation de consommation + appel `redeem_reward` |
