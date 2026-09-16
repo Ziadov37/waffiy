@@ -2,8 +2,8 @@
 
 Carte de fidélité digitale. Une application mobile, deux rôles : client et commerçant.
 
-> **État : étape 1 (cadrage) terminée.** Aucun code applicatif n'est encore écrit — c'est
-> volontaire, la méthode de travail impose une validation entre chaque étape.
+> **État : étapes 1 (cadrage) et 2 (base de données) terminées.** L'application Expo n'est pas
+> encore initialisée : c'est l'étape 3, qui attend votre validation.
 
 ## Documentation
 
@@ -36,7 +36,46 @@ Expo SDK 57 · React Native · TypeScript strict · Expo Router · Supabase (Pos
 RLS, Edge Functions) · Zustand · TanStack Query · `expo-camera` · `react-native-qrcode-svg` ·
 Expo Push Notifications.
 
-## Installation
+## Base de données
+
+Le schéma complet vit dans `supabase/` : 11 migrations, 9 tables, 6 fonctions métier et les
+politiques RLS. Toute la logique sensible est côté serveur — l'application mobile ne calcule
+aucun solde.
+
+```bash
+# Rejouer les migrations, le jeu de démonstration et les tests sur un Postgres jetable.
+# Ne nécessite que Docker et psql : la pile Supabase complète n'est pas requise.
+supabase/tests/run.sh
+
+# Garder la base debout après les tests, pour l'inspecter :
+supabase/tests/run.sh --keep    # puis psql -h 127.0.0.1 -p 55432 -U postgres -d waffiy
+```
+
+**62 tests** couvrent les sept règles métier et l'isolation des données. Ils se font passer pour de
+vrais utilisateurs (`set role authenticated` plus un JWT simulé) : sans cela ils s'exécuteraient en
+superutilisateur, contourneraient la RLS et passeraient pour de mauvaises raisons.
+
+### Fonctions serveur
+
+| Fonction | Rôle |
+|---|---|
+| `credit_visit` | Crédite une visite. Atomique, réservée au commerçant, idempotente, bornée par le délai anti-fraude. |
+| `redeem_reward` | Consomme une récompense. Jamais automatique. Déduit le seuil exact, conserve le surplus. |
+| `join_merchant` | Seule voie de création d'une carte. Appelée par le client après scan du QR du commerce. |
+| `resolve_client_for_scan` | Vue restreinte du client scanné, programmes triés par avancement. |
+| `program_threshold_impact` | Chiffre l'effet d'un changement de seuil, sans rien modifier. |
+| `set_program_threshold` | Refuse le changement tant que l'avertissement n'est pas confirmé. |
+
+### Comptes de démonstration
+
+| Compte | Email | Code |
+|---|---|---|
+| Karim — Burger House | `karim@burgerhouse.dz` | QR d'inscription `BURGER23` |
+| Nadir — Coffee Lab | `nadir@coffeelab.dz` | QR d'inscription `CAFE2345` |
+| Sarah Benali — cliente | `sarah.benali@example.dz` | QR client `SARAH23456` |
+| Amine Kaci — récompense disponible | `amine.kaci@example.dz` | QR client `AMNE234567` |
+
+## Installation de l'application
 
 *À compléter à l'étape 3, quand le projet Expo sera initialisé.*
 
@@ -48,6 +87,7 @@ Copier `.env.example` en `.env` — *le fichier sera créé à l'étape 3.*
 |---|---|
 | `EXPO_PUBLIC_SUPABASE_URL` | URL du projet Supabase |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Clé anonyme — **seule clé présente dans l'application mobile** |
+| `BREVO_SMTP_USER` / `BREVO_SMTP_PASS` | SMTP des codes de connexion. Côté Supabase uniquement, jamais dans l'application. |
 
 La clé de service ne doit jamais apparaître dans le code mobile : elle ne vit que dans les secrets
 des Edge Functions.
