@@ -27,11 +27,11 @@ export default function RewardUnlocked() {
       <View style={styles.body}>
         <Text style={styles.emoji}>🎉</Text>
         <Text variant="title" center>
-          Récompense débloquée !
+          Un nouveau choix disponible !
         </Text>
         {match ? (
           <Text tone="secondary" center>
-            {match.card.merchantName} — vous avez gagné :
+            {match.card.merchantName} — vos points permettent de choisir :
           </Text>
         ) : null}
 
@@ -48,21 +48,25 @@ export default function RewardUnlocked() {
             </Text>
           ) : null}
           <Text variant="caption" tone="secondary" style={styles.description}>
-            Présentez votre QR code au commerçant pour l’utiliser. Rien n’est débité tant
-            qu’il ne l’a pas validé.
+            Cette récompense utilise le même solde que vos autres choix chez ce commerce.
+            Les points sont débités uniquement après validation par le commerçant.
           </Text>
         </Card>
 
         <View style={styles.actions}>
           <Button
-            label="Afficher mon QR code"
+            label="Choisir mes récompenses"
             variant="reward"
-            onPress={() => router.replace('/(client)/qr')}
+            onPress={() =>
+              match
+                ? router.replace(`/(client)/card/${match.card.merchantId}`)
+                : router.replace('/(client)/(tabs)')
+            }
           />
           <Button
             label="Retour à l’accueil"
             variant="ghost"
-            onPress={() => router.replace('/(client)')}
+            onPress={() => router.replace('/(client)/(tabs)')}
           />
         </View>
       </View>

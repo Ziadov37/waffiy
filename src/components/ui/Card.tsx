@@ -32,7 +32,7 @@ export function Card({
 
   if (!onPress) {
     return (
-      <View style={[styles.card, raised ? shadows.raised : shadows.card, base, style]}>
+      <View style={[styles.card, raised ? shadows.raised : null, base, style]}>
         {children}
       </View>
     );
@@ -45,7 +45,7 @@ export function Card({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        raised ? shadows.raised : shadows.card,
+        raised ? shadows.raised : null,
         base,
         pressed ? { opacity: 0.94 } : null,
         style,

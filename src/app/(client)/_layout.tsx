@@ -30,6 +30,7 @@ export default function ClientLayout() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen name="scan-merchant" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="secure-account" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

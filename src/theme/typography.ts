@@ -19,7 +19,7 @@ export const fontFamily = {
  */
 export const typography = {
   display: { fontFamily: fontFamily.extrabold, fontSize: 34, lineHeight: 40 },
-  title: { fontFamily: fontFamily.extrabold, fontSize: 24, lineHeight: 30 },
+  title: { fontFamily: fontFamily.extrabold, fontSize: 26, lineHeight: 32 },
   heading: { fontFamily: fontFamily.bold, fontSize: 19, lineHeight: 25 },
   subheading: { fontFamily: fontFamily.semibold, fontSize: 16, lineHeight: 22 },
   body: { fontFamily: fontFamily.regular, fontSize: 15, lineHeight: 22 },

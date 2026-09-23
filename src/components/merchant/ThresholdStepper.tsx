@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon, Text } from '@/components/ui';
-import { colors, minTouchTarget, radius, spacing } from '@/theme';
+import { colors } from '@/theme';
 
 export type ThresholdStepperProps = {
   value: number;
@@ -33,18 +33,21 @@ export function ThresholdStepper({
       style={styles.row}
       accessible
       accessibilityRole="adjustable"
-      accessibilityLabel="Nombre de visites nécessaires"
+      accessibilityLabel="Coût de la récompense en points"
       accessibilityValue={{ min, max, now: value }}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-      onAccessibilityAction={(e) => step(e.nativeEvent.actionName === 'increment' ? 1 : -1)}
+      onAccessibilityAction={(e) =>
+        step(e.nativeEvent.actionName === 'increment' ? 1 : -1)
+      }
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Retirer une visite"
+        accessibilityLabel="Retirer un point"
         onPress={() => step(-1)}
         disabled={value <= min}
         style={({ pressed }) => [
           styles.button,
+          styles.minusButton,
           { opacity: value <= min ? 0.4 : pressed ? 0.8 : 1 },
         ]}
       >
@@ -57,15 +60,16 @@ export function ThresholdStepper({
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Ajouter une visite"
+        accessibilityLabel="Ajouter un point"
         onPress={() => step(1)}
         disabled={value >= max}
         style={({ pressed }) => [
           styles.button,
+          styles.plusButton,
           { opacity: value >= max ? 0.4 : pressed ? 0.8 : 1 },
         ]}
       >
-        <Icon name="plus" size={20} color={colors.ink} />
+        <Icon name="plus" size={22} color={colors.white} />
       </Pressable>
     </View>
   );
@@ -75,20 +79,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.borderInput,
-    borderRadius: radius.lg,
-    padding: spacing.sm,
+    gap: 16,
   },
   button: {
-    width: minTouchTarget,
-    height: minTouchTarget,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  value: { minWidth: 56, textAlign: 'center' },
+  minusButton: {
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.borderInput,
+  },
+  plusButton: { backgroundColor: colors.primary },
+  value: { flex: 1, textAlign: 'center', fontSize: 38, lineHeight: 44 },
 });

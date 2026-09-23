@@ -25,6 +25,7 @@ export const SERVER_ERROR_CODES = [
   'MISSING_REQUEST_ID',
   'REQUEST_ID_CONFLICT',
   'THRESHOLD_CHANGE_REQUIRES_CONFIRMATION',
+  'STAFF_SESSION_INVALID',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];
@@ -88,12 +89,12 @@ const MESSAGES: Record<ServerErrorCode, { title: string; message: string; retrya
   },
   INSUFFICIENT_STAMPS: {
     title: 'Récompense indisponible',
-    message: 'Ce client n’a pas encore atteint le seuil.',
+    message: 'Ce client n’a pas assez de points pour ce choix.',
     retryable: false,
   },
   INVALID_COUNT: {
-    title: 'Nombre de visites invalide',
-    message: 'Une seule visite peut être créditée à la fois.',
+    title: 'Quantité invalide',
+    message: 'Vérifiez la quantité demandée et le solde disponible.',
     retryable: false,
   },
   INVALID_THRESHOLD: {
@@ -114,6 +115,11 @@ const MESSAGES: Record<ServerErrorCode, { title: string; message: string; retrya
   THRESHOLD_CHANGE_REQUIRES_CONFIRMATION: {
     title: 'Confirmation requise',
     message: 'Des clients progressent déjà sur ce programme.',
+    retryable: false,
+  },
+  STAFF_SESSION_INVALID: {
+    title: 'Session caisse expirée',
+    message: 'Le propriétaire doit rouvrir une session avec le PIN du caissier.',
     retryable: false,
   },
 };

@@ -77,7 +77,8 @@ export async function resolveClient(
     totalVisits: head.total_visits,
     rewardsRedeemed: head.rewards_redeemed,
     programs,
-    suggestedProgramId: programs.find((p) => p.isSuggested)?.id ?? programs[0]?.id ?? null,
+    suggestedProgramId:
+      programs.find((p) => p.isSuggested)?.id ?? programs[0]?.id ?? null,
   };
 }
 
@@ -85,11 +86,13 @@ export async function creditVisit(input: {
   clientCode: string;
   programId: string;
   requestId: string;
+  staffSessionToken?: string | null;
 }): Promise<ScanResult> {
   const { data, error } = await supabase.rpc('credit_visit', {
     p_client_code: input.clientCode,
     p_program_id: input.programId,
     p_request_id: input.requestId,
+    p_staff_session_token: input.staffSessionToken ?? null,
   });
   if (error) throw error;
   return data;
@@ -99,11 +102,15 @@ export async function redeemReward(input: {
   clientCode: string;
   programId: string;
   requestId: string;
+  quantity?: number;
+  staffSessionToken?: string | null;
 }): Promise<ScanResult> {
-  const { data, error } = await supabase.rpc('redeem_reward', {
+  const { data, error } = await supabase.rpc('redeem_points', {
     p_client_code: input.clientCode,
     p_program_id: input.programId,
     p_request_id: input.requestId,
+    p_quantity: input.quantity ?? 1,
+    p_staff_session_token: input.staffSessionToken ?? null,
   });
   if (error) throw error;
   return data;

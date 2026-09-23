@@ -3,9 +3,9 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppBar, Button, Card, Screen, Text, TextField } from '@/components/ui';
-import { useRequestEmailCode } from '@/features/auth/hooks';
+import { getAuthErrorMessage } from '@/features/auth/api';
+import { useSignUpWithPassword } from '@/features/auth/hooks';
 import { ownerStepSchema, type OwnerStepValues } from '@/features/auth/schemas';
-import { toAppError } from '@/lib/errors';
 import { clearFieldError, collectFieldErrors, type FieldErrors } from '@/lib/forms';
 import { useMerchantSignupStore } from '@/stores/merchant-signup';
 import { spacing } from '@/theme';
@@ -19,10 +19,13 @@ export default function SignupMerchantCompte() {
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
   });
   const [errors, setErrors] = useState<FieldErrors<OwnerStepValues>>({});
   const [formError, setFormError] = useState<string>();
-  const request = useRequestEmailCode();
+  const signup = useSignUpWithPassword();
 
   const set = (key: keyof OwnerStepValues) => (value: string) => {
     setValues((v) => ({ ...v, [key]: value }));
@@ -37,11 +40,15 @@ export default function SignupMerchantCompte() {
     }
     setFormError(undefined);
 
-    request.mutate(
+    signup.mutate(
       {
         email: parsed.data.email,
-        createUser: true,
-        metadata: { firstName: parsed.data.firstName, lastName: parsed.data.lastName },
+        password: parsed.data.password,
+        metadata: {
+          firstName: parsed.data.firstName,
+          lastName: parsed.data.lastName,
+          ...(parsed.data.phone ? { phone: parsed.data.phone } : {}),
+        },
       },
       {
         onSuccess: () =>
@@ -52,7 +59,7 @@ export default function SignupMerchantCompte() {
             // l'email resterait orphelin si l'inscription était abandonnée.
             params: { email: parsed.data.email, next: 'merchant-setup' },
           }),
-        onError: (err) => setFormError(toAppError(err).message),
+        onError: (error) => setFormError(getAuthErrorMessage(error)),
       },
     );
   };
@@ -104,6 +111,38 @@ export default function SignupMerchantCompte() {
           error={errors.email}
           hint="C’est avec cette adresse que vous vous connecterez."
         />
+        <TextField
+          label="Téléphone"
+          optional
+          value={values.phone ?? ''}
+          onChangeText={set('phone')}
+          autoComplete="tel"
+          keyboardType="phone-pad"
+          placeholder="+213 5 00 00 00 00"
+          error={errors.phone}
+          hint="À vérifier par SMS avant de l’utiliser pour vous connecter."
+        />
+        <TextField
+          label="Mot de passe"
+          value={values.password}
+          onChangeText={set('password')}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          error={errors.password}
+          hint="8 caractères minimum."
+        />
+        <TextField
+          label="Confirmer le mot de passe"
+          value={values.confirmPassword}
+          onChangeText={set('confirmPassword')}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          returnKeyType="go"
+          onSubmitEditing={submit}
+          error={errors.confirmPassword}
+        />
 
         {formError ? (
           <Text variant="caption" tone="danger">
@@ -112,9 +151,9 @@ export default function SignupMerchantCompte() {
         ) : null}
 
         <Button
-          label="Créer mon commerce"
+          label="Vérifier mon email"
           loadingLabel="Envoi du code…"
-          loading={request.isPending}
+          loading={signup.isPending}
           onPress={submit}
         />
       </View>

@@ -39,7 +39,7 @@ export const queryClient = new QueryClient({
 
 export const queryPersister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'waffiy.query-cache',
+  key: 'waffiy.query-cache.points-v2',
   // Au-delà, on préfère repartir d'un cache vide plutôt que de bloquer le
   // démarrage sur la désérialisation d'un cache obèse.
   throttleTime: 2000,
@@ -51,11 +51,13 @@ export const queryKeys = {
   profile: ['profile'] as const,
   cards: ['cards'] as const,
   card: (merchantId: string) => ['cards', merchantId] as const,
+  publicMerchant: (joinCode: string) => ['public-merchant', joinCode] as const,
   notifications: ['notifications'] as const,
   unreadCount: ['notifications', 'unread'] as const,
   rewards: ['rewards'] as const,
   merchant: ['merchant'] as const,
   programs: (merchantId: string) => ['programs', merchantId] as const,
+  staff: (merchantId: string) => ['staff', merchantId] as const,
   customers: (merchantId: string) => ['customers', merchantId] as const,
   customer: (merchantId: string, profileId: string) =>
     ['customers', merchantId, profileId] as const,

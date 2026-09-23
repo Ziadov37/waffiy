@@ -4,13 +4,10 @@ import { StyleSheet, View } from 'react-native';
 
 import { EmptyState } from '@/components/feedback';
 import { Card, Screen, Text } from '@/components/ui';
-import {
-  NOTIFICATION_STYLE,
-  type NotificationRow,
-} from '@/features/notifications/api';
+import { NOTIFICATION_STYLE, type NotificationRow } from '@/features/notifications/api';
 import { useMarkAllRead, useNotifications } from '@/features/notifications/hooks';
 import { relativeDate, timeOfDay } from '@/lib/format';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 const TONE_SURFACE = {
   neutral: { surface: colors.surface, border: colors.border },
@@ -40,77 +37,64 @@ export default function ClientNotifications() {
 
   return (
     <Screen onRefresh={() => void refetch()} refreshing={isRefetching}>
-      <Text variant="title" style={styles.title}>
-        Notifications
-      </Text>
+      <View style={styles.content}>
+        <Text variant="title">Notifications</Text>
 
-      {isPending ? (
-        <Card>
-          <Text tone="secondary">Chargement…</Text>
-        </Card>
-      ) : data && data.length > 0 ? (
-        <View style={styles.list}>
-          {data.map((n) => {
-            const style = NOTIFICATION_STYLE[n.kind];
-            const tone = TONE_SURFACE[style.tone];
-            return (
-              <Card
-                key={n.id}
-                surface={tone.surface}
-                border={tone.border}
-                onPress={() => open(n)}
-                accessibilityLabel={`${n.title}. ${n.body}`}
-              >
-                <View style={styles.row}>
-                  <View style={styles.emojiBox}>
+        {isPending ? (
+          <Card>
+            <Text tone="secondary">Chargement…</Text>
+          </Card>
+        ) : data && data.length > 0 ? (
+          <View style={styles.list}>
+            {data.map((n) => {
+              const style = NOTIFICATION_STYLE[n.kind];
+              const tone = TONE_SURFACE[style.tone];
+              return (
+                <Card
+                  key={n.id}
+                  surface={tone.surface}
+                  border={tone.border}
+                  onPress={() => open(n)}
+                  accessibilityLabel={`${n.title}. ${n.body}`}
+                >
+                  <View style={styles.row}>
                     <Text style={styles.emoji}>{style.emoji}</Text>
+                    <View style={styles.body}>
+                      <Text variant="subheading">{n.title}</Text>
+                      <Text variant="caption" tone="secondary">
+                        {n.body}
+                      </Text>
+                      <Text variant="caption" tone="tertiary" style={styles.time}>
+                        {relativeDate(n.created_at)} • {timeOfDay(n.created_at)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.body}>
-                    <Text variant="subheading">{n.title}</Text>
-                    <Text variant="caption" tone="secondary">
-                      {n.body}
-                    </Text>
-                    <Text variant="caption" tone="tertiary" style={styles.time}>
-                      {relativeDate(n.created_at)} • {timeOfDay(n.created_at)}
-                    </Text>
-                  </View>
-                  {n.read_at === null ? <View style={styles.unreadDot} /> : null}
-                </View>
-              </Card>
-            );
-          })}
-        </View>
-      ) : (
-        <EmptyState
-          emoji="🔔"
-          title="Aucune notification"
-          description="Vos visites et récompenses apparaîtront ici."
-        />
-      )}
+                </Card>
+              );
+            })}
+          </View>
+        ) : (
+          <EmptyState
+            emoji="🔔"
+            title="Aucune notification"
+            description="Vos visites et récompenses apparaîtront ici."
+          />
+        )}
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { paddingVertical: spacing.lg },
-  list: { gap: spacing.md },
-  row: { flexDirection: 'row', gap: spacing.md },
-  emojiBox: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  content: { paddingTop: 14, gap: 20 },
+  list: {
+    gap: spacing.md,
+    borderTopWidth: 2,
+    borderTopColor: colors.ink,
+    paddingTop: 14,
   },
-  emoji: { fontSize: 20, lineHeight: 26 },
-  body: { flex: 1, gap: 2 },
-  time: { marginTop: spacing.xs },
-  unreadDot: {
-    width: 9,
-    height: 9,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-    marginTop: spacing.xs,
-  },
+  row: { flexDirection: 'row', gap: 13 },
+  emoji: { fontSize: 20, lineHeight: 24 },
+  body: { flex: 1, gap: 5 },
+  time: { marginTop: 0, color: '#A2AAB6', fontWeight: '700' },
 });

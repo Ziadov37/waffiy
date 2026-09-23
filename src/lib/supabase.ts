@@ -1,6 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { AppState, Platform } from 'react-native';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/database.types';
 import { env } from './env';
@@ -13,24 +13,35 @@ import { secureStorage } from './secure-storage';
  * les fonctions SECURITY DEFINER : même en interceptant cette clé, on ne peut
  * ni créditer une visite, ni lire la progression d'un autre client.
  */
-export const supabase = createClient<Database>(
-  env.EXPO_PUBLIC_SUPABASE_URL,
-  env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-  {
-    auth: {
-      storage: secureStorage,
-      autoRefreshToken: true,
-      persistSession: true,
-      // Pas de lien magique : la connexion se fait par code à 6 chiffres saisi
-      // dans l'application. Détecter une session dans l'URL n'a donc pas lieu
-      // d'être, et l'activer sur mobile provoque des faux positifs.
-      detectSessionInUrl: false,
+declare global {
+  // Expo Web recharge les modules pendant le développement. Conserver le
+  // client sur globalThis évite plusieurs GoTrueClient partageant le même
+  // stockage et se bloquant mutuellement sur le verrou de session.
+  var __waffiySupabase: SupabaseClient<Database> | undefined;
+}
+
+export const supabase =
+  globalThis.__waffiySupabase ??
+  createClient<Database>(
+    env.EXPO_PUBLIC_SUPABASE_URL,
+    env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      auth: {
+        storage: secureStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        // La confirmation d'inscription se fait par code à 6 chiffres saisi dans
+        // l'application, puis les connexions utilisent le mot de passe. Aucun de
+        // ces flux ne crée de session dans l'URL.
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: { 'x-application-name': 'waffiy-mobile' },
+      },
     },
-    global: {
-      headers: { 'x-application-name': 'waffiy-mobile' },
-    },
-  },
-);
+  );
+
+globalThis.__waffiySupabase = supabase;
 
 /**
  * Supabase rafraîchit le jeton sur une minuterie. En arrière-plan, iOS et

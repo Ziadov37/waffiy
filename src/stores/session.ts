@@ -14,9 +14,12 @@ type SessionState = {
   /** Rôle affiché. Le rôle n'est PAS une propriété du compte (décision D2) :
    *  c'est un point de vue, qu'un compte possédant un commerce peut changer. */
   activeRole: AppRole;
+  /** Commerce ouvert depuis un QR public, conservé pendant l'authentification. */
+  pendingJoinCode: string | null;
   setSession: (session: Session | null) => void;
   setHydrated: (value: boolean) => void;
   setActiveRole: (role: AppRole) => void;
+  setPendingJoinCode: (code: string | null) => void;
   reset: () => void;
 };
 
@@ -32,17 +35,22 @@ export const useSessionStore = create<SessionState>()(
       session: null,
       hydrated: false,
       activeRole: 'client',
+      pendingJoinCode: null,
       setSession: (session) => set({ session }),
       setHydrated: (hydrated) => set({ hydrated }),
       setActiveRole: (activeRole) => set({ activeRole }),
-      reset: () => set({ session: null, activeRole: 'client' }),
+      setPendingJoinCode: (pendingJoinCode) => set({ pendingJoinCode }),
+      reset: () => set({ session: null, activeRole: 'client', pendingJoinCode: null }),
     }),
     {
       name: 'waffiy.session-ui',
       storage: createJSONStorage(() => AsyncStorage),
       // La session n'est PAS persistée ici : elle vit dans le stockage chiffré
       // de Supabase. Ne persister que la préférence d'affichage.
-      partialize: (state) => ({ activeRole: state.activeRole }),
+      partialize: (state) => ({
+        activeRole: state.activeRole,
+        pendingJoinCode: state.pendingJoinCode,
+      }),
     },
   ),
 );

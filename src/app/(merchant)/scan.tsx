@@ -1,12 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppBar, Button, Screen, Text, TextField } from '@/components/ui';
 import { parseScannedCode } from '@/lib/qr';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 /**
  * Scan du QR client par le commerçant.
@@ -19,10 +19,23 @@ import { colors, radius, spacing } from '@/theme';
 export default function MerchantScan() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
-  const [manual, setManual] = useState(false);
+  const [requestingPermission, setRequestingPermission] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [error, setError] = useState<string>();
   const handled = useRef(false);
+  const permissionRequested = useRef(false);
+
+  // Le clic sur l'onglet SCAN doit mener directement au lecteur. Au premier
+  // passage, on déclenche donc la demande système sans imposer un écran
+  // intermédiaire propre à Waffiy.
+  useEffect(() => {
+    if (!permission || permission.granted || !permission.canAskAgain) return;
+    if (permissionRequested.current) return;
+
+    permissionRequested.current = true;
+    setRequestingPermission(true);
+    void requestPermission().finally(() => setRequestingPermission(false));
+  }, [permission, requestPermission]);
 
   const open = (code: string) => {
     if (handled.current) return;
@@ -49,64 +62,15 @@ export default function MerchantScan() {
     open(parsed.code);
   };
 
-  if (manual || permission?.granted === false) {
+  if (!permission || requestingPermission) {
     return (
-      <Screen>
-        <AppBar title="Recherche manuelle" closeIcon />
-        <View style={styles.manual}>
-          {permission?.granted === false ? (
-            <Text tone="secondary">
-              L’accès à la caméra est refusé. Saisissez le code affiché sous le QR du client,
-              ou autorisez la caméra.
-            </Text>
-          ) : (
-            <Text tone="secondary">
-              Saisissez le code affiché sous le QR code du client, au format WFY-XXXXX-XXXXX.
-            </Text>
-          )}
-
-          <TextField
-            label="Code client"
-            value={manualCode}
-            onChangeText={(v) => {
-              setManualCode(v.toUpperCase());
-              setError(undefined);
-            }}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            placeholder="WFY-XXXXX-XXXXX"
-            error={error}
-            autoFocus
-          />
-
-          <Button label="Ouvrir la fiche" onPress={submitManual} />
-
-          {permission?.granted === false ? (
-            <Button
-              label="Autoriser la caméra"
-              variant="secondary"
-              onPress={() => void requestPermission()}
-            />
-          ) : (
-            <Button
-              label="Revenir au scan"
-              variant="ghost"
-              onPress={() => {
-                setManual(false);
-                setError(undefined);
-              }}
-            />
-          )}
+      <Screen background={colors.ink} edges={['top', 'bottom']} scroll={false}>
+        <AppBar title="" closeIcon />
+        <View style={styles.preparing}>
+          <Text variant="heading" tone="white" center>
+            Ouverture de la caméra…
+          </Text>
         </View>
-      </Screen>
-    );
-  }
-
-  if (!permission) {
-    return (
-      <Screen>
-        <AppBar title="Scanner" closeIcon />
-        <Text tone="secondary">Préparation de la caméra…</Text>
       </Screen>
     );
   }
@@ -120,48 +84,105 @@ export default function MerchantScan() {
             Accès à la caméra
           </Text>
           <Text tone="secondary" center>
-            Waffiy a besoin de la caméra pour lire le QR code de vos clients.
+            L’accès est refusé. Vous pouvez l’autoriser ou saisir le code affiché sous le
+            QR du client.
           </Text>
-          <Button label="Autoriser la caméra" onPress={() => void requestPermission()} />
-          <Button
-            label="Saisir le code à la main"
-            variant="ghost"
-            onPress={() => setManual(true)}
+          {permission.canAskAgain ? (
+            <Button
+              label="Autoriser la caméra"
+              onPress={() => void requestPermission()}
+            />
+          ) : null}
+          <TextField
+            label="Code client"
+            value={manualCode}
+            onChangeText={(value) => {
+              setManualCode(value.toUpperCase());
+              setError(undefined);
+            }}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={15}
+            placeholder="WFY-XXXXX-XXXXX"
+            error={error}
+            returnKeyType="go"
+            onSubmitEditing={submitManual}
           />
+          <Button label="Ouvrir la fiche client" onPress={submitManual} />
         </View>
       </Screen>
     );
   }
 
   return (
-    <Screen background={colors.ink} edges={['top', 'bottom']} scroll={false} padded={false}>
-      <View style={styles.bar}>
-        <AppBar title="" closeIcon />
+    <Screen
+      background={colors.ink}
+      edges={['top', 'bottom']}
+      scroll={false}
+      padded={false}
+    >
+      <CameraView
+        style={StyleSheet.absoluteFill}
+        facing="back"
+        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+        onBarcodeScanned={({ data }) => onScan(data)}
+      />
+      <View style={styles.cameraShade} pointerEvents="none" />
+
+      <View style={styles.scanHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Fermer"
+          onPress={() => router.back()}
+          style={styles.headerButton}
+        >
+          <Text style={styles.headerIcon}>✕</Text>
+        </Pressable>
+        <View style={styles.headerActions}>
+          <View style={styles.headerButton}>
+            <Text style={styles.headerIcon}>⚡</Text>
+          </View>
+          <View style={styles.manualShortcut}>
+            <Text style={styles.shortcutText}>Recherche manuelle</Text>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.viewfinder}>
-        <CameraView
-          style={StyleSheet.absoluteFill}
-          facing="back"
-          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-          onBarcodeScanned={({ data }) => onScan(data)}
-        />
-        <View style={styles.frame} pointerEvents="none" />
-      </View>
-
-      <View style={styles.footer}>
+      <View style={styles.scanArea}>
+        <View style={styles.viewfinder}>
+          <View style={[styles.corner, styles.topLeft]} />
+          <View style={[styles.corner, styles.topRight]} />
+          <View style={[styles.corner, styles.bottomLeft]} />
+          <View style={[styles.corner, styles.bottomRight]} />
+          <View style={styles.scanLine} />
+        </View>
         <Text variant="heading" tone="white" center>
           Scannez le QR code du client
         </Text>
         <Text style={styles.hint} center>
-          {error ?? 'La fiche s’ouvre automatiquement dès la détection.'}
+          Le profil s’ouvre automatiquement dès la détection.
         </Text>
-        <Button
-          label="Recherche manuelle"
-          variant="ghost"
-          style={styles.manualButton}
-          onPress={() => setManual(true)}
-        />
+      </View>
+
+      <View style={styles.footer}>
+        <View style={styles.manualPanel}>
+          <TextField
+            label="Ou entrez le code client"
+            value={manualCode}
+            onChangeText={(value) => {
+              setManualCode(value.toUpperCase());
+              setError(undefined);
+            }}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={15}
+            placeholder="WFY-XXXXX-XXXXX"
+            error={error}
+            returnKeyType="go"
+            onSubmitEditing={submitManual}
+          />
+          <Button label="Valider le code" size="md" onPress={submitManual} />
+        </View>
       </View>
     </Screen>
   );
@@ -170,26 +191,96 @@ export default function MerchantScan() {
 const styles = StyleSheet.create({
   bar: { paddingHorizontal: spacing.lg },
   manual: { gap: spacing.lg, marginTop: spacing.lg },
-  viewfinder: {
-    flex: 1,
-    margin: spacing.lg,
-    borderRadius: radius.xxl,
-    overflow: 'hidden',
-    backgroundColor: '#000',
+  preparing: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  cameraShade: { position: 'absolute', inset: 0, backgroundColor: 'rgba(11,15,22,0.62)' },
+  scanHeader: {
+    position: 'relative',
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  frame: {
-    position: 'absolute',
+  headerActions: { flexDirection: 'row', gap: 10 },
+  headerButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIcon: { color: colors.white, fontSize: 17, lineHeight: 21 },
+  manualShortcut: {
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortcutText: {
+    color: colors.white,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: 'Manrope_700Bold',
+  },
+  scanArea: {
+    position: 'relative',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 30,
+    paddingTop: 12,
+  },
+  viewfinder: { width: 248, height: 248, marginBottom: 14 },
+  corner: { position: 'absolute', width: 54, height: 54, borderColor: colors.primary },
+  topLeft: {
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    margin: spacing.xxxl,
-    borderWidth: 3,
-    borderColor: colors.white,
-    borderRadius: radius.xl,
-    opacity: 0.85,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 18,
   },
-  footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.sm },
-  hint: { color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 18 },
-  manualButton: { borderColor: 'rgba(255,255,255,0.3)', borderWidth: 1, marginTop: spacing.sm },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 18,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 18,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 18,
+  },
+  scanLine: {
+    position: 'absolute',
+    top: '50%',
+    left: 14,
+    right: 14,
+    height: 3,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+  },
+  footer: { position: 'relative', paddingHorizontal: 22, paddingBottom: 18 },
+  hint: { color: '#93A1B3', fontSize: 13.5, lineHeight: 19 },
+  manualPanel: {
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+  },
 });

@@ -13,8 +13,8 @@ create table public.profiles (
   last_name  text not null default ''
     check (length(last_name) <= 80),
 
-  -- Non vérifié en phase 1 : la connexion passe par un code email (D1).
-  -- Conservé pour la recherche manuelle en caisse et un futur OTP SMS.
+  -- Non vérifié par SMS : l'email est confirmé à l'inscription. Ce numéro sert
+  -- d'alias de connexion par mot de passe et à la recherche manuelle en caisse.
   phone text
     check (phone is null or phone ~ '^\+?[0-9 ().-]{6,20}$'),
 
@@ -105,7 +105,7 @@ create trigger profiles_assign_public_code
 -- -----------------------------------------------------------------------------
 -- Création automatique du profil à l'inscription
 -- -----------------------------------------------------------------------------
--- L'application n'insère jamais dans profiles : elle appelle signInWithOtp()
+-- L'application n'insère jamais dans profiles : elle appelle auth.signUp()
 -- avec des métadonnées, et ce déclencheur matérialise le profil. C'est ce qui
 -- garantit qu'aucun compte auth ne peut exister sans profil correspondant.
 

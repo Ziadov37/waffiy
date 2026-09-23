@@ -22,10 +22,17 @@ trap cleanup EXIT
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 docker run -d --name "$CONTAINER" \
   -e POSTGRES_PASSWORD=waffiy -e POSTGRES_DB=waffiy \
+  -v "$ROOT:$ROOT:ro" \
   -p "${PGPORT}:5432" "$IMAGE" >/dev/null
 
 export PGPASSWORD=waffiy
-PSQL=(psql -h 127.0.0.1 -p "$PGPORT" -U postgres -d waffiy -v ON_ERROR_STOP=1 --quiet)
+if command -v psql >/dev/null 2>&1; then
+  PSQL=(psql -h 127.0.0.1 -p "$PGPORT" -U postgres -d waffiy -v ON_ERROR_STOP=1 --quiet)
+else
+  # Sur une machine sans client PostgreSQL local, utiliser celui de l'image.
+  # Le dépôt est monté au même chemin pour que les appels `-f` restent valides.
+  PSQL=(docker exec -i -e PGPASSWORD=waffiy "$CONTAINER" psql -U postgres -d waffiy -v ON_ERROR_STOP=1 --quiet)
+fi
 
 printf 'Démarrage de Postgres'
 for _ in $(seq 1 60); do
@@ -39,6 +46,7 @@ echo '── Imitation du schéma auth'
 
 echo '── Migrations'
 for f in "$ROOT"/supabase/migrations/*.sql; do
+  [[ "$(basename "$f")" < "20260917120000" ]] || continue
   printf '   %s\n' "$(basename "$f")"
   "${PSQL[@]}" -f "$f" >/dev/null
 done
@@ -49,7 +57,7 @@ if [[ -f "$ROOT/supabase/seed.sql" ]]; then
 fi
 
 shopt -s nullglob
-tests=("$ROOT"/supabase/tests/[1-9]*.sql)
+tests=("$ROOT"/supabase/tests/10_*.sql)
 if (( ${#tests[@]} )); then
   echo '── Tests'
   for f in "${tests[@]}"; do
@@ -57,6 +65,16 @@ if (( ${#tests[@]} )); then
     "${PSQL[@]}" -f "$f"
   done
 fi
+
+# Vérifier la migration d'une base historique puis les règles du solde commun.
+echo '── Migration vers les points communs'
+for f in "$ROOT"/supabase/migrations/*.sql; do
+  [[ "$(basename "$f")" < "20260917120000" ]] && continue
+  "${PSQL[@]}" -f "$f" >/dev/null
+done
+for f in "$ROOT"/supabase/tests/[2-9]*.sql; do
+  "${PSQL[@]}" -f "$f"
+done
 
 echo
 echo 'Suite terminée sans erreur.'

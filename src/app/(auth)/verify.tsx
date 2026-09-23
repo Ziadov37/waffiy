@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppBar, Button, Screen, Text, TextField } from '@/components/ui';
-import { useRequestEmailCode, useVerifyEmailCode } from '@/features/auth/hooks';
+import { useResendSignupCode, useVerifySignupCode } from '@/features/auth/hooks';
 import { otpSchema } from '@/features/auth/schemas';
 import { toAppError } from '@/lib/errors';
 import { spacing, typography } from '@/theme';
+import { useSessionStore } from '@/stores/session';
 
 const RESEND_DELAY_SECONDS = 60;
 
 /**
- * Saisie du code à 6 chiffres.
+ * Confirmation de l'inscription par code à 6 chiffres.
  *
  * Code plutôt que lien magique : un lien impose un lien profond, fragile sur
  * mobile et rompu si l'email s'ouvre dans un navigateur différent de celui de
@@ -23,9 +24,10 @@ export default function Verify() {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>();
   const [cooldown, setCooldown] = useState(RESEND_DELAY_SECONDS);
+  const pendingJoinCode = useSessionStore((state) => state.pendingJoinCode);
 
-  const verify = useVerifyEmailCode();
-  const resend = useRequestEmailCode();
+  const verify = useVerifySignupCode();
+  const resend = useResendSignupCode();
 
   // Le serveur impose 60 s entre deux envois (supabase/config.toml). Afficher
   // le décompte évite que l'utilisateur martèle un bouton qui échouerait.
@@ -51,19 +53,23 @@ export default function Verify() {
           // créer le commerce et son programme à partir du brouillon local.
           if (next === 'merchant-setup') {
             router.replace('/(auth)/signup-merchant/creating');
+          } else if (pendingJoinCode) {
+            router.replace(`/join?code=${encodeURIComponent(pendingJoinCode)}` as Href);
           } else {
             router.replace('/');
           }
         },
         onError: () =>
-          setError('Code incorrect ou expiré. Vérifiez votre email ou demandez-en un nouveau.'),
+          setError(
+            'Code incorrect ou expiré. Vérifiez votre email ou demandez-en un nouveau.',
+          ),
       },
     );
   };
 
   return (
     <Screen>
-      <AppBar eyebrow="Vérification" title="Entrez votre code" />
+      <AppBar eyebrow="Inscription" title="Vérifiez votre email" />
 
       <View style={styles.form}>
         <Text tone="secondary">
@@ -102,19 +108,14 @@ export default function Verify() {
         />
 
         <Button
-          label={
-            cooldown > 0 ? `Renvoyer le code (${cooldown} s)` : 'Renvoyer le code'
-          }
+          label={cooldown > 0 ? `Renvoyer le code (${cooldown} s)` : 'Renvoyer le code'}
           variant="ghost"
           disabled={cooldown > 0 || resend.isPending}
           onPress={() =>
-            resend.mutate(
-              { email, createUser: false },
-              {
-                onSuccess: () => setCooldown(RESEND_DELAY_SECONDS),
-                onError: (err) => setError(toAppError(err).message),
-              },
-            )
+            resend.mutate(email, {
+              onSuccess: () => setCooldown(RESEND_DELAY_SECONDS),
+              onError: (err) => setError(toAppError(err).message),
+            })
           }
         />
       </View>

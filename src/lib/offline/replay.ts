@@ -41,6 +41,8 @@ export async function replayQueue(): Promise<ReplayOutcome[]> {
         // La clé d'idempotence d'origine : c'est elle qui rend le rejeu sûr
         // si l'action avait en réalité abouti avant la coupure.
         requestId: action.requestId,
+        quantity: action.quantity ?? 1,
+        staffSessionToken: action.staffSessionToken ?? null,
       });
 
       await removeFromQueue(action.requestId);

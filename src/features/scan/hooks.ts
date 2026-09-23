@@ -1,12 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { onlineManager } from '@tanstack/react-query';
+import {
+  onlineManager,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/query-client';
-import { enqueue, newRequestId, readQueue, removeFromQueue } from '@/lib/offline/queue';
+import { useStaffSessionStore } from '@/stores/staff-session';
+import { enqueue, readQueue, removeFromQueue } from '@/lib/offline/queue';
 import { replayQueue } from '@/lib/offline/replay';
 import { creditVisit, redeemReward, resolveClient, type ScanResult } from './api';
 
-export function useResolveClient(merchantId: string | undefined, clientCode: string | undefined) {
+export function useResolveClient(
+  merchantId: string | undefined,
+  clientCode: string | undefined,
+) {
   return useQuery({
     queryKey: queryKeys.scan(merchantId ?? '', clientCode ?? ''),
     queryFn: () => resolveClient(clientCode as string, merchantId as string),
@@ -19,16 +27,22 @@ export function useResolveClient(merchantId: string | undefined, clientCode: str
 }
 
 export type ScanMutationInput = {
+  /**
+   * Générée par l'écran avant le premier envoi, puis réutilisée par son bouton
+   * « Réessayer ». Une nouvelle clé après une réponse réseau perdue pourrait
+   * créditer deux fois une action déjà enregistrée par le serveur.
+   */
+  requestId: string;
   merchantId: string;
   clientCode: string;
   clientName: string;
   programId: string;
   programName: string;
+  quantity?: number;
 };
 
 export type ScanMutationResult =
-  | { status: 'done'; result: ScanResult }
-  | { status: 'queued'; requestId: string };
+  { status: 'done'; result: ScanResult } | { status: 'queued'; requestId: string };
 
 /**
  * Crédite une visite, ou met l'intention en file si l'appareil est hors ligne.
@@ -47,39 +61,50 @@ export function useRedeemReward() {
 
 function useScanMutation(kind: 'credit' | 'redeem') {
   const queryClient = useQueryClient();
+  const staffSessionToken = useStaffSessionStore((state) => state.session?.token);
 
   return useMutation<ScanMutationResult, Error, ScanMutationInput>({
     mutationFn: async (input) => {
-      const requestId = newRequestId();
-
       if (!onlineManager.isOnline()) {
         await enqueue({
-          requestId,
+          requestId: input.requestId,
           kind,
           merchantId: input.merchantId,
           programId: input.programId,
           programName: input.programName,
           clientCode: input.clientCode,
           clientName: input.clientName,
+          quantity: input.quantity ?? 1,
+          staffSessionToken,
         });
-        return { status: 'queued', requestId };
+        return { status: 'queued', requestId: input.requestId };
       }
 
       const call = kind === 'credit' ? creditVisit : redeemReward;
       const result = await call({
         clientCode: input.clientCode,
         programId: input.programId,
-        requestId,
+        requestId: input.requestId,
+        quantity: input.quantity ?? 1,
+        staffSessionToken: staffSessionToken ?? null,
       });
       return { status: 'done', result };
     },
 
     onSuccess: (_result, input) => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.scan(input.merchantId, input.clientCode) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.activity(input.merchantId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.scan(input.merchantId, input.clientCode),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.activity(input.merchantId),
+      });
       void queryClient.invalidateQueries({ queryKey: queryKeys.stats(input.merchantId) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.customers(input.merchantId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.customers(input.merchantId),
+      });
       void queryClient.invalidateQueries({ queryKey: ['offline-queue'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cards });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.rewards });
     },
   });
 }

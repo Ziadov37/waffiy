@@ -41,18 +41,18 @@ Zustand est le premier piège de cette architecture : deux sources de vérité q
 
 ### 1.4 Dépendances à ajouter (toutes gratuites)
 
-| Paquet | Raison |
-|---|---|
-| `expo-secure-store` | Sans lui, le refresh token Supabase est stocké **en clair** dans AsyncStorage. Non négociable. |
-| `zod` | Validation des formulaires **et** parsing défensif des charges utiles QR (données non fiables venant d'une caméra). |
-| `react-hook-form` | 5 formulaires multi-étapes dans le design ; le faire à la main coûterait plus cher. |
-| `@tanstack/query-async-storage-persister` | Cache hors ligne persistant — le commerçant en sous-sol voit ses données. |
-| `@react-native-community/netinfo` | Détection réseau fiable pour la file d'attente hors ligne. |
-| `date-fns` + locale `fr` | « 12 septembre 2026 », « à l'instant », « hier ». |
-| `react-native-svg` | Dépendance de `react-native-qrcode-svg`. |
-| `expo-font` + `@expo-google-fonts/manrope` | Manrope, imposée par la DA. |
-| `expo-brightness` | Le design promet « la luminosité augmente automatiquement » sur l'écran QR. |
-| `expo-haptics` | Retour tactile à la détection du QR — un commerçant ne regarde pas l'écran en scannant. |
+| Paquet                                     | Raison                                                                                                              |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `expo-secure-store`                        | Sans lui, le refresh token Supabase est stocké **en clair** dans AsyncStorage. Non négociable.                      |
+| `zod`                                      | Validation des formulaires **et** parsing défensif des charges utiles QR (données non fiables venant d'une caméra). |
+| `react-hook-form`                          | 5 formulaires multi-étapes dans le design ; le faire à la main coûterait plus cher.                                 |
+| `@tanstack/query-async-storage-persister`  | Cache hors ligne persistant — le commerçant en sous-sol voit ses données.                                           |
+| `@react-native-community/netinfo`          | Détection réseau fiable pour la file d'attente hors ligne.                                                          |
+| `date-fns` + locale `fr`                   | « 12 septembre 2026 », « à l'instant », « hier ».                                                                   |
+| `react-native-svg`                         | Dépendance de `react-native-qrcode-svg`.                                                                            |
+| `expo-font` + `@expo-google-fonts/manrope` | Manrope, imposée par la DA.                                                                                         |
+| `expo-brightness`                          | Le design promet « la luminosité augmente automatiquement » sur l'écran QR.                                         |
+| `expo-haptics`                             | Retour tactile à la détection du QR — un commerçant ne regarde pas l'écran en scannant.                             |
 
 Versions stables au 15/09/2026 : Expo SDK **57.0.23**, `expo-router` 57.0.21, `expo-camera` 57.0.5,
 `@supabase/supabase-js` 2.116.0, `@tanstack/react-query` 5.102.8, `zustand` 5.0.15,
@@ -73,7 +73,8 @@ par téléphone de Supabase délègue à un fournisseur SMS externe — Twilio, 
 **aucun n'a de palier gratuit durable**. C'est en contradiction directe avec « aucun service hors du
 palier gratuit ».
 
-Trois issues possibles, détaillées dans la question Q1.
+La vérification est donc envoyée une seule fois par email à l'inscription. Les connexions suivantes
+utilisent l'email ou le téléphone avec le mot de passe et ne consomment aucun envoi.
 
 ### C2 — Le client a besoin d'une caméra, absente de la liste d'écrans — ✅ résolu (Q5)
 
@@ -82,6 +83,7 @@ Le cahier des charges ne donne pas d'écran de scan au client. Mais l'état vide
 commerçant dispose d'un écran « QR d'inscription clients ».
 
 Il y a donc **deux QR qui circulent en sens inverse** :
+
 - le QR **du client**, que le commerçant scanne pour créditer
 - le QR **du commerce**, que le client scanne pour s'inscrire au programme
 
@@ -172,14 +174,14 @@ de transactions. L'historique « Mes récompenses utilisées » est une simple l
 
 ## 3. Décisions prises (validées le 16/09/2026)
 
-| # | Question | Décision | Contradiction résolue |
-|---|---|---|---|
-| Q1 | Authentification | **Code à usage unique par email**, sans mot de passe | C1 — plus de dépendance SMS payante |
-| Q2 | Rôles | **Capacité dérivée** : tout compte est client, commerçant s'il possède un commerce | C4 — le design l'emporte sur le cahier des charges |
-| Q3 | Équipe | **Supprimée.** Un commerce = un compte | C7 — mais crée une nouvelle contradiction, ci-dessous |
-| Q4 | QR client | **Code aléatoire statique, sans nom ni identifiant séquentiel** | C3 — énumération et fuite de données écartées ; le rejeu reste couvert par le délai anti-fraude |
-| Q5 | Inscription à un commerce | **Uniquement par scan du QR du commerce par le client.** La carte du commerce apparaît alors dans « Mes cartes » | C2 — l'écran de scan client est confirmé nécessaire |
-| Q6 | Programmes à l'inscription | **Tous les programmes actifs d'un coup.** La carte porte le commerce, pas le programme | cohérent avec « 3 programmes » affiché sur la carte du prototype |
+| #   | Question                   | Décision                                                                                                         | Contradiction résolue                                                                           |
+| --- | -------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Q1  | Authentification           | **Code email à l'inscription, puis email/téléphone + mot de passe**                                              | C1 — plus de dépendance SMS payante                                                             |
+| Q2  | Rôles                      | **Capacité dérivée** : tout compte est client, commerçant s'il possède un commerce                               | C4 — le design l'emporte sur le cahier des charges                                              |
+| Q3  | Équipe                     | **Supprimée.** Un commerce = un compte                                                                           | C7 — mais crée une nouvelle contradiction, ci-dessous                                           |
+| Q4  | QR client                  | **Code aléatoire statique, sans nom ni identifiant séquentiel**                                                  | C3 — énumération et fuite de données écartées ; le rejeu reste couvert par le délai anti-fraude |
+| Q5  | Inscription à un commerce  | **Uniquement par scan du QR du commerce par le client.** La carte du commerce apparaît alors dans « Mes cartes » | C2 — l'écran de scan client est confirmé nécessaire                                             |
+| Q6  | Programmes à l'inscription | **Tous les programmes actifs d'un coup.** La carte porte le commerce, pas le programme                           | cohérent avec « 3 programmes » affiché sur la carte du prototype                                |
 
 ### Conséquence de la décision Q5 — première visite en caisse
 
@@ -200,6 +202,7 @@ est horodatée, **attribuée à un membre du personnel**, et génère une notifi
 la notification restent ; l'attribution disparaît de l'interface.
 
 Effets concrets, pour qu'ils soient explicites :
+
 - l'historique de la fiche client perd sa colonne « Karim / Amina » visible dans le prototype ;
 - l'entrée « Équipe — 3 membres » disparaît de l'écran Réglages commerçant ;
 - plusieurs personnes en caisse partageront le même compte, donc la même session.
@@ -212,9 +215,10 @@ admin devra enquêter sur une fraude, ou le jour où vous réintroduiriez une é
 ### Conséquence de la décision Q1 sur le palier gratuit
 
 Le serveur d'email intégré à Supabase est bridé à quelques envois par heure et réservé au
-développement. Une connexion par code échouerait dès les premiers utilisateurs réels. Il faut donc
-brancher un **SMTP externe gratuit** dès l'étape 2 — je recommande **Brevo, 300 emails par jour, en
-permanence**. C'est une configuration dans le tableau de bord Supabase, aucun code mobile concerné.
+développement. Un **SMTP externe gratuit** reste donc requis pour confirmer les inscriptions et
+récupérer les mots de passe, mais une connexion quotidienne n'envoie plus d'email. Je recommande
+**Brevo, 300 emails par jour, en permanence**. C'est une configuration dans le tableau de bord
+Supabase, aucun secret SMTP ne vit dans l'application mobile.
 
 ---
 

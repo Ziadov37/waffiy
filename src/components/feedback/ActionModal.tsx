@@ -53,17 +53,17 @@ export function ActionModal({
         if (!loading) onCancel();
       }}
     >
-      <Pressable
-        style={styles.backdrop}
-        onPress={() => {
-          if (!loading) onCancel();
-        }}
-        accessibilityRole="button"
-        accessibilityLabel="Fermer"
-      >
-        {/* Le contenu absorbe l'appui : sans cela, toucher la modale elle-même
-            la fermerait. */}
-        <Pressable style={[styles.sheet, shadows.raised]} onPress={() => {}}>
+      <View style={styles.backdrop}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onCancel}
+          disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Fermer"
+        />
+        {/* Le fond est un frère du contenu pour éviter les boutons imbriqués
+            sur le web et les fermetures au clic dans la modale. */}
+        <View style={[styles.sheet, shadows.raised]} accessibilityViewIsModal>
           {emoji ? <Text style={styles.emoji}>{emoji}</Text> : null}
 
           <Text variant="heading" center>
@@ -95,8 +95,8 @@ export function ActionModal({
               onPress={onCancel}
             />
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }

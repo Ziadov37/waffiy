@@ -12,6 +12,48 @@ export type MerchantStats = {
   returningRate: number;
 };
 
+export type MerchantDetailsPatch = Pick<
+  Database['public']['Tables']['merchants']['Update'],
+  'name' | 'category' | 'city' | 'phone' | 'logo_url'
+>;
+
+export async function updateMerchantDetails(
+  merchantId: string,
+  patch: MerchantDetailsPatch,
+) {
+  const { data, error } = await supabase
+    .from('merchants')
+    .update(patch)
+    .eq('id', merchantId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function uploadMerchantLogo(
+  merchantId: string,
+  uri: string,
+  mimeType: string,
+) {
+  const response = await fetch(uri);
+  if (!response.ok) throw new Error('LOGO_READ_FAILED');
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > 1024 * 1024) throw new Error('LOGO_TOO_LARGE');
+
+  const path = `${merchantId}/logo`;
+  const { error } = await supabase.storage.from('merchant-logos').upload(path, bytes, {
+    contentType: mimeType,
+    upsert: true,
+  });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('merchant-logos').getPublicUrl(path);
+  return updateMerchantDetails(merchantId, {
+    logo_url: `${data.publicUrl}?v=${Date.now()}`,
+  });
+}
+
 export async function fetchPrograms(merchantId: string): Promise<Program[]> {
   const { data, error } = await supabase
     .from('programs')
@@ -27,17 +69,15 @@ export async function fetchPrograms(merchantId: string): Promise<Program[]> {
 export async function fetchProgramMemberCounts(
   merchantId: string,
 ): Promise<Record<string, number>> {
-  const { data, error } = await supabase
-    .from('program_progress')
-    .select('program_id')
-    .eq('merchant_id', merchantId);
-  if (error) throw error;
-
-  const counts: Record<string, number> = {};
-  for (const row of data ?? []) {
-    counts[row.program_id] = (counts[row.program_id] ?? 0) + 1;
-  }
-  return counts;
+  const [members, programs] = await Promise.all([
+    supabase
+      .from('memberships')
+      .select('id', { count: 'exact', head: true })
+      .eq('merchant_id', merchantId),
+    fetchPrograms(merchantId),
+  ]);
+  if (members.error) throw members.error;
+  return Object.fromEntries(programs.map((p) => [p.id, members.count ?? 0]));
 }
 
 export async function fetchStats(merchantId: string): Promise<MerchantStats> {
@@ -120,6 +160,20 @@ export async function fetchCustomers(
   return data ?? [];
 }
 
+export async function fetchCustomer(
+  merchantId: string,
+  profileId: string,
+): Promise<CustomerRow | null> {
+  const { data, error } = await supabase
+    .from('merchant_customers')
+    .select('*')
+    .eq('merchant_id', merchantId)
+    .eq('profile_id', profileId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchCustomerHistory(
   merchantId: string,
   profileId: string,
@@ -136,13 +190,25 @@ export async function fetchCustomerHistory(
 }
 
 export async function fetchCustomerProgress(merchantId: string, profileId: string) {
-  const { data, error } = await supabase
-    .from('program_progress')
-    .select('program_id, stamps, lifetime_stamps, rewards_redeemed, programs(id, name, emoji, threshold, status)')
-    .eq('merchant_id', merchantId)
-    .eq('profile_id', profileId);
-  if (error) throw error;
-  return data ?? [];
+  const [wallet, programs] = await Promise.all([
+    supabase
+      .from('memberships')
+      .select('points, lifetime_points, rewards_redeemed')
+      .eq('merchant_id', merchantId)
+      .eq('profile_id', profileId)
+      .single(),
+    fetchPrograms(merchantId),
+  ]);
+  if (wallet.error) throw wallet.error;
+  return programs
+    .filter((p) => p.status === 'active')
+    .map((p) => ({
+      program_id: p.id,
+      stamps: wallet.data.points,
+      lifetime_stamps: wallet.data.lifetime_points,
+      rewards_redeemed: wallet.data.rewards_redeemed,
+      programs: p,
+    }));
 }
 
 export type ProgramInput = {
@@ -203,6 +269,23 @@ export async function updateProgram(
     .single();
   if (error) throw error;
   return data;
+}
+
+/** Retire le programme, en conservant le registre si des visites existent. */
+export async function deleteProgram(programId: string): Promise<void> {
+  const { error } = await supabase
+    .from('programs')
+    .delete()
+    .eq('id', programId)
+    .select('id')
+    .single();
+
+  // La clé étrangère protège aussi contre un crédit concurrent à la suppression.
+  if (error?.code === '23503') {
+    await updateProgram(programId, { status: 'archived' });
+    return;
+  }
+  if (error) throw error;
 }
 
 export type ThresholdImpact = {

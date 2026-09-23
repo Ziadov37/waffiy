@@ -83,6 +83,11 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
+    // GitHub Pages sert ce dépôt sous /waffiy. La valeur reste absente en
+    // développement local et n'est injectée que pendant l'export public.
+    ...(process.env.EXPO_PUBLIC_WEB_BASE_PATH
+      ? { baseUrl: process.env.EXPO_PUBLIC_WEB_BASE_PATH }
+      : {}),
   },
 };
 

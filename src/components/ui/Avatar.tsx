@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { colors, radius } from '@/theme';
+import { colors } from '@/theme';
 import { Text } from './Text';
 
 export type AvatarProps = {
@@ -20,14 +20,14 @@ export function Avatar({ initials, size = 44, highlighted = false }: AvatarProps
         {
           width: size,
           height: size,
-          borderRadius: size >= 56 ? radius.xl : radius.md,
-          backgroundColor: highlighted ? colors.rewardSurface : colors.surfaceMuted,
+          borderRadius: size >= 56 ? 18 : 14,
+          backgroundColor: highlighted ? colors.rewardSurface : colors.avatarSurface,
         },
       ]}
     >
       <Text
         variant={size >= 56 ? 'heading' : 'label'}
-        style={{ color: highlighted ? colors.rewardText : colors.textSecondary }}
+        style={{ color: highlighted ? colors.rewardText : colors.primaryDark }}
       >
         {initials}
       </Text>

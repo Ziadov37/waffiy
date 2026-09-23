@@ -1,94 +1,152 @@
-import { StyleSheet, View } from 'react-native';
-
-import { Badge, Card, Icon, Text } from '@/components/ui';
+import { Image, StyleSheet, View } from 'react-native';
+import { Card, Icon, Text } from '@/components/ui';
 import type { Card as CardModel } from '@/features/cards/api';
-import { lastVisitLabel, remainingLabel } from '@/lib/format';
-import { colors, spacing } from '@/theme';
-import { ProgressDisplay } from './ProgressDisplay';
+import { colors, fontFamily, spacing } from '@/theme';
 
 export type LoyaltyCardProps = {
   card: CardModel;
   onPress?: () => void;
   onShowQr?: () => void;
-  /** Version détaillée : pastilles, ligne de récompense, dernière visite. */
   expanded?: boolean;
 };
 
 export function LoyaltyCard({ card, onPress, expanded = true }: LoyaltyCardProps) {
-  const program = card.primaryProgram;
-  const ready = card.rewardAvailable;
+  const merchantHeader = (
+    <View style={styles.head}>
+      <View
+        style={[
+          styles.logo,
+          { backgroundColor: card.surfaceColor ?? colors.primarySurface },
+        ]}
+      >
+        {card.logoUrl ? (
+          <Image source={{ uri: card.logoUrl }} style={styles.logoImage} />
+        ) : (
+          <Text style={styles.emoji}>{card.primaryProgram?.emoji ?? '🏪'}</Text>
+        )}
+      </View>
+      <View style={styles.name}>
+        <Text variant="subheading">{card.merchantName}</Text>
+        <Text variant="caption" tone="secondary">
+          {card.city}
+        </Text>
+      </View>
+      <Icon name="chevron-right" color={colors.textMuted} />
+    </View>
+  );
+
+  if (!expanded) {
+    return (
+      <Card
+        {...(onPress ? { onPress } : {})}
+        accessibilityLabel={`Carte ${card.merchantName}. Voir le détail`}
+        surface={colors.white}
+        border={card.borderColor ?? colors.border}
+        style={styles.compactCard}
+      >
+        {merchantHeader}
+      </Card>
+    );
+  }
 
   return (
     <Card
-      surface={card.surfaceColor ?? colors.surface}
-      border={ready ? colors.rewardBorder : (card.borderColor ?? colors.border)}
-      {...(onPress ? { onPress, accessibilityLabel: `Carte ${card.merchantName}` } : {})}
+      {...(onPress ? { onPress } : {})}
+      accessibilityLabel={`${card.merchantName}, ${card.points} points. Voir les récompenses`}
+      surface={colors.white}
+      border={card.borderColor ?? colors.border}
+      style={styles.card}
     >
-      <View style={styles.header}>
-        <Text style={styles.emoji}>{program?.emoji ?? '🎁'}</Text>
-        <View style={styles.headerText}>
-          <Text variant="subheading" numberOfLines={1}>
-            {card.merchantName}
-          </Text>
-          {program ? (
-            <Text variant="caption" tone="secondary" numberOfLines={1}>
-              🎁 {program.name}
-              {card.programs.length > 1
-                ? `  ·  ${card.programs.length} programmes`
-                : ''}
-            </Text>
-          ) : (
-            <Text variant="caption" tone="tertiary">
-              Aucun programme actif pour le moment
-            </Text>
-          )}
-        </View>
-        {onPress ? <Icon name="chevron-right" size={20} color={colors.textTertiary} /> : null}
+      {merchantHeader}
+      <View style={styles.balance}>
+        <Text style={styles.points}>{card.points}</Text>
+        <Text style={styles.unit}>POINTS</Text>
+        <Text variant="caption" tone="secondary" style={styles.balanceNote}>
+          à utiliser chez ce commerce
+        </Text>
       </View>
-
-      {program ? (
-        <>
-          {expanded ? (
-            <View style={styles.progress}>
-              <ProgressDisplay stamps={program.stamps} threshold={program.threshold} />
-            </View>
-          ) : null}
-
-          <View style={styles.footer}>
-            <Text variant="counter" tone={ready ? 'reward' : 'ink'}>
-              {program.stamps} / {program.threshold}
-            </Text>
-            {ready ? (
-              <Badge label="Récompense disponible" tone="reward" />
-            ) : (
-              <Text variant="label" tone="secondary">
-                {remainingLabel(program.stamps, program.threshold)}
+      <View style={styles.rewards}>
+        {card.programs.map((reward) => (
+          <View
+            key={reward.id}
+            style={[styles.reward, !reward.rewardAvailable && styles.locked]}
+          >
+            <Text style={styles.emoji}>{reward.emoji}</Text>
+            {expanded ? (
+              <Text variant="caption" numberOfLines={1}>
+                {reward.name}
               </Text>
-            )}
-          </View>
-
-          {expanded ? (
-            <Text variant="caption" tone="tertiary" style={styles.lastVisit}>
-              {lastVisitLabel(card.lastActivityAt)}
+            ) : null}
+            <Text variant="label" tone={reward.rewardAvailable ? 'primary' : 'secondary'}>
+              {reward.threshold} pts
             </Text>
-          ) : null}
-        </>
-      ) : null}
+            {reward.rewardAvailable ? (
+              <Text variant="caption" tone="primary">
+                Disponible
+              </Text>
+            ) : null}
+          </View>
+        ))}
+        {card.programs.length === 0 ? (
+          <Text variant="caption" tone="secondary">
+            De nouvelles récompenses bientôt.
+          </Text>
+        ) : null}
+      </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  emoji: { fontSize: 28, lineHeight: 34 },
-  headerText: { flex: 1, gap: 2 },
-  progress: { marginTop: spacing.lg },
-  footer: {
-    marginTop: spacing.lg,
-    flexDirection: 'row',
+  card: { padding: 20, borderRadius: 24, gap: 18 },
+  compactCard: { padding: 16, borderRadius: 18 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  logo: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  lastVisit: { marginTop: spacing.sm },
+  logoImage: { width: 48, height: 48 },
+  emoji: { fontSize: 26, lineHeight: 34 },
+  name: { flex: 1, gap: 2 },
+  balance: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    columnGap: 8,
+  },
+  points: {
+    fontFamily: fontFamily.extrabold,
+    fontSize: 40,
+    lineHeight: 48,
+    color: colors.primaryDark,
+  },
+  unit: {
+    fontFamily: fontFamily.bold,
+    fontSize: 13,
+    color: colors.primaryDark,
+    letterSpacing: 1,
+  },
+  balanceNote: { flexBasis: '100%' },
+  rewards: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 16,
+  },
+  reward: {
+    backgroundColor: colors.primarySurface,
+    borderRadius: 14,
+    padding: 10,
+    minWidth: 80,
+    maxWidth: 150,
+    alignItems: 'center',
+    gap: 3,
+  },
+  locked: { backgroundColor: colors.surfaceMuted },
 });

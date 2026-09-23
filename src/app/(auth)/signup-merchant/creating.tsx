@@ -33,7 +33,7 @@ export default function SignupMerchantCreating() {
       clearDraft();
       setActiveRole('merchant');
       await queryClient.invalidateQueries();
-      router.replace('/(merchant)');
+      router.replace('/(merchant)/(tabs)');
     },
   });
 
@@ -85,7 +85,7 @@ export default function SignupMerchantCreating() {
           <Button
             label="Continuer sans commerce"
             variant="ghost"
-            onPress={() => router.replace('/(client)')}
+            onPress={() => router.replace('/(client)/(tabs)')}
           />
         </View>
       </Screen>

@@ -32,10 +32,12 @@ export const colors = {
   borderInput: '#DFE3EB',
 
   /** Fond de l'application, derrière les cartes blanches. */
-  background: '#E7E9EE',
+  background: '#F7F8FA',
   surface: '#FFFFFF',
   /** Surface neutre — pastilles inactives, filtres non sélectionnés. */
   surfaceMuted: '#F2F4F8',
+  /** Fond de l'avatar client dans le prototype. */
+  avatarSurface: '#DCEFE4',
 
   danger: '#C2410C',
   dangerSurface: '#FEF2EE',

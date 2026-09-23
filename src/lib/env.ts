@@ -8,20 +8,28 @@ import { z } from 'zod';
  * après la cause. Ici, l'erreur est immédiate et dit quoi corriger.
  */
 const schema = z.object({
+  EXPO_PUBLIC_APP_URL: z
+    .string()
+    .url('EXPO_PUBLIC_APP_URL doit être une URL web complète.'),
   EXPO_PUBLIC_SUPABASE_URL: z
     .string()
-    .url('EXPO_PUBLIC_SUPABASE_URL doit être une URL complète (https://xxx.supabase.co).'),
+    .url(
+      'EXPO_PUBLIC_SUPABASE_URL doit être une URL complète (https://xxx.supabase.co).',
+    ),
   EXPO_PUBLIC_SUPABASE_ANON_KEY: z
     .string()
     .min(20, 'EXPO_PUBLIC_SUPABASE_ANON_KEY est absente ou tronquée.'),
+  EXPO_PUBLIC_SUPPORT_EMAIL: z.string().email().optional(),
 });
 
 // process.env.EXPO_PUBLIC_* est remplacé littéralement à la compilation par
 // Metro : il faut donc écrire les accès en toutes lettres, un accès dynamique
 // renverrait undefined.
 const parsed = schema.safeParse({
+  EXPO_PUBLIC_APP_URL: process.env.EXPO_PUBLIC_APP_URL,
   EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
   EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  EXPO_PUBLIC_SUPPORT_EMAIL: process.env.EXPO_PUBLIC_SUPPORT_EMAIL || undefined,
 });
 
 if (!parsed.success) {

@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/theme';
+import { colors } from '@/theme';
 
 type ScreenProps = {
   children: ReactNode;
@@ -40,7 +40,7 @@ export function Screen({
   footer,
 }: ScreenProps) {
   const inner: ViewStyle = {
-    ...(padded ? { paddingHorizontal: spacing.lg } : null),
+    ...(padded ? { paddingHorizontal: 22 } : null),
     ...contentStyle,
   };
 
@@ -74,5 +74,5 @@ export function Screen({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scrollContent: { paddingBottom: spacing.xxxl },
+  scrollContent: { paddingBottom: 120 },
 });

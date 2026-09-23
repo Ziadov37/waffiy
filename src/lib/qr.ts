@@ -16,18 +16,36 @@ const CODE_ALPHABET = /^[2-9A-HJKMNP-Z]+$/;
 
 export const CLIENT_PREFIX = 'WFY:C:';
 export const MERCHANT_PREFIX = 'WFY:J:';
+const MERCHANT_PAGE_PATHS = ['/join', '/join.html'] as const;
 
 export function encodeClientQr(publicCode: string): string {
   return `${CLIENT_PREFIX}${publicCode}`;
 }
 
-export function encodeMerchantQr(joinCode: string): string {
-  return `${MERCHANT_PREFIX}${joinCode}`;
+/**
+ * URL publique placée dans le QR du comptoir.
+ *
+ * La page appartient au frontend Waffiy. Les Edge Functions Supabase ne sont
+ * pas un hébergement HTML : sans domaine personnalisé, Supabase transforme
+ * leur réponse en texte brut. L'export prépare `/join/index.html` afin que
+ * l'URL publique `/join/` reste comprise par Expo Router.
+ */
+export function encodeMerchantQr(joinCode: string, publicAppUrl: string): string {
+  // Conserver un éventuel sous-chemin d'hébergement (`/waffiy-web` sur
+  // GitHub Pages). Un chemin commençant par `/` repartirait à la racine du
+  // domaine et produirait un QR en 404.
+  const base = `${publicAppUrl.replace(/\/+$/, '')}/`;
+  const url = new URL('join/', base);
+  url.searchParams.set('code', normalize(joinCode));
+  return url.toString();
+}
+
+export function encodeMerchantAppLink(joinCode: string): string {
+  return `waffiy://join?code=${encodeURIComponent(normalize(joinCode))}`;
 }
 
 export type ScannedCode =
-  | { kind: 'client'; code: string }
-  | { kind: 'merchant'; code: string };
+  { kind: 'client'; code: string } | { kind: 'merchant'; code: string };
 
 const clientSchema = z.string().length(10).regex(CODE_ALPHABET);
 const merchantSchema = z.string().length(8).regex(CODE_ALPHABET);
@@ -56,8 +74,27 @@ export function parseScannedCode(raw: string): ScannedCode | null {
     return merchantSchema.safeParse(code).success ? { kind: 'merchant', code } : null;
   }
 
-  // Saisie manuelle : on déduit le type de la longueur.
-  const code = normalize(value);
+  // Nouveau QR web : la page reste lisible sans l'application, tandis que
+  // le scanner Waffiy récupère directement le code sans détour par le navigateur.
+  try {
+    const url = new URL(value);
+    if (
+      (url.protocol === 'https:' || url.protocol === 'http:') &&
+      MERCHANT_PAGE_PATHS.some((path) => url.pathname.replace(/\/+$/, '').endsWith(path))
+    ) {
+      const code = normalize(url.searchParams.get('code') ?? '');
+      return merchantSchema.safeParse(code).success ? { kind: 'merchant', code } : null;
+    }
+  } catch {
+    // Une saisie manuelle n'est normalement pas une URL : poursuivre avec le
+    // format court au lieu de la considérer comme une erreur.
+  }
+
+  // Saisie manuelle : le code imprimé sous le QR est préfixé par « WFY- »,
+  // contrairement à la valeur brute stockée en base. On accepte les deux
+  // formes pour que le commerçant puisse recopier exactement ce qu'il voit.
+  const normalized = normalize(value);
+  const code = normalized.startsWith('WFY') ? normalized.slice(3) : normalized;
   if (clientSchema.safeParse(code).success) return { kind: 'client', code };
   if (merchantSchema.safeParse(code).success) return { kind: 'merchant', code };
 

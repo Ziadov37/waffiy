@@ -8,7 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, minTouchTarget, radius, spacing, typography } from '@/theme';
+import { colors, minTouchTarget, spacing, typography } from '@/theme';
 import { Text } from './Text';
 
 export type TextFieldProps = Omit<TextInputProps, 'style'> & {
@@ -80,16 +80,16 @@ export function TextField({
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.xs },
-  label: { marginBottom: spacing.xs / 2 },
+  container: { gap: 7 },
+  label: { color: '#3A4353' },
   input: {
     ...typography.bodyMedium,
     color: colors.ink,
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderRadius: radius.md,
+    borderRadius: 14,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: 14,
     minHeight: minTouchTarget,
   },
   helper: { marginTop: spacing.xs / 2 },

@@ -2,24 +2,23 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Screen, Text } from '@/components/ui';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export default function Welcome() {
   const router = useRouter();
 
   return (
-    <Screen background={colors.primary} edges={['top', 'bottom']} scroll={false}>
+    <Screen edges={['top', 'bottom']} scroll={false}>
       <View style={styles.content}>
-        <View style={styles.brand}>
-          <View style={styles.logo}>
-            <Text variant="display" style={styles.logoLetter}>
-              W
-            </Text>
-          </View>
-          <Text variant="display" tone="white" center>
-            La fidélité digitale,{'\n'}dans une seule app.
+        <View style={styles.logo}>
+          <Text variant="display" style={styles.logoLetter}>
+            W
           </Text>
-          <Text tone="white" center style={styles.pitch}>
+        </View>
+
+        <View style={styles.brand}>
+          <Text variant="display">La fidélité digitale,{'\n'}dans une seule app.</Text>
+          <Text style={styles.pitch}>
             Collectez vos tampons chez vos commerces préférés, ou lancez le programme de
             fidélité de votre commerce.
           </Text>
@@ -27,15 +26,17 @@ export default function Welcome() {
 
         <View style={styles.actions}>
           <Button
-            label="Créer un compte"
-            variant="secondary"
-            onPress={() => router.push('/(auth)/role')}
+            label="Connexion"
+            onPress={() => router.push('/(auth)/login')}
+            trailing={<Text style={styles.primaryArrow}>→</Text>}
           />
           <Button
-            label="J’ai déjà un compte"
+            label="Créer un compte"
             variant="ghost"
-            onPress={() => router.push('/(auth)/role-login')}
-            style={styles.ghost}
+            size="md"
+            fullWidth={false}
+            onPress={() => router.push('/(auth)/role')}
+            style={styles.signupButton}
           />
         </View>
       </View>
@@ -44,21 +45,19 @@ export default function Welcome() {
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, justifyContent: 'space-between', paddingVertical: spacing.xxxl },
-  brand: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.lg },
+  content: { flex: 1, paddingTop: 40, paddingBottom: 8 },
+  brand: { marginTop: 180, gap: 14 },
   logo: {
-    width: 84,
-    height: 84,
-    borderRadius: radius.xxl,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
-  logoLetter: { color: colors.white, fontSize: 44, lineHeight: 52 },
-  pitch: { color: 'rgba(255,255,255,0.86)', paddingHorizontal: spacing.md },
-  actions: { gap: spacing.sm },
-  // Le bouton fantôme sur fond vert a besoin d'un texte blanc : la variante
-  // par défaut vise un fond clair.
-  ghost: { borderColor: 'rgba(255,255,255,0.35)', borderWidth: 1 },
+  logoLetter: { color: colors.white, fontSize: 34, lineHeight: 40 },
+  pitch: { color: colors.textSecondary, fontSize: 16, lineHeight: 25 },
+  actions: { alignItems: 'center', gap: spacing.sm, marginTop: 'auto', paddingTop: 48 },
+  signupButton: { alignSelf: 'center' },
+  primaryArrow: { color: colors.white, fontSize: 18, lineHeight: 20 },
 });

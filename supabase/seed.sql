@@ -8,7 +8,8 @@
 -- transactions et le solde en découle. Un jeu de démonstration incohérent avec
 -- son registre invaliderait la promesse « le registre est la source de vérité ».
 --
--- Mots de passe : aucun. La connexion se fait par code reçu par email (D1).
+-- Mot de passe commun aux comptes de démonstration : WaffiyDemo2026!
+-- Il est volontairement public et ne doit jamais être réutilisé en production.
 
 begin;
 
@@ -136,6 +137,80 @@ insert into auth.users (id, email, raw_user_meta_data) values
    '{"first_name":"Lina","last_name":"Belkacem"}'::jsonb),
   ('22222222-2222-4222-8222-555555555555', 'nadia.hamdi@example.dz',
    '{"first_name":"Nadia","last_name":"Hamdi"}'::jsonb);
+
+-- Le banc de tests SQL utilise une imitation minimale de auth.users, sans les
+-- colonnes de GoTrue. Sur une vraie instance Supabase, rendre les comptes
+-- immédiatement utilisables : mot de passe chiffré et email déjà confirmé.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'auth'
+      and table_name = 'users'
+      and column_name = 'encrypted_password'
+  ) then
+    execute $sql$
+      update auth.users
+      set instance_id = '00000000-0000-0000-0000-000000000000'::uuid,
+          aud = 'authenticated',
+          role = 'authenticated',
+          encrypted_password = extensions.crypt(
+            'WaffiyDemo2026!',
+            extensions.gen_salt('bf')
+          ),
+          email_confirmed_at = coalesce(email_confirmed_at, now()),
+          confirmation_token = '',
+          recovery_token = '',
+          email_change = '',
+          email_change_token_new = '',
+          email_change_token_current = '',
+          phone_change = '',
+          phone_change_token = '',
+          reauthentication_token = '',
+          raw_app_meta_data = jsonb_build_object(
+            'provider', 'email',
+            'providers', jsonb_build_array('email')
+          ),
+          is_sso_user = false,
+          is_anonymous = false,
+          created_at = coalesce(created_at, now()),
+          updated_at = now()
+      where id::text like '11111111-1111-4111-8111-%'
+         or id::text like '22222222-2222-4222-8222-%'
+    $sql$;
+
+    -- GoTrue associe l'identité email au compte. Sans cette ligne, les
+    -- utilisateurs insérés directement dans auth.users ne peuvent pas se
+    -- connecter par mot de passe sur une instance Supabase hébergée.
+    execute $sql$
+      insert into auth.identities (
+        provider_id, user_id, identity_data, provider, created_at, updated_at
+      )
+      select
+        u.id::text,
+        u.id,
+        jsonb_build_object(
+          'sub', u.id::text,
+          'email', u.email,
+          'email_verified', true,
+          'phone_verified', false
+        ),
+        'email',
+        now(),
+        now()
+      from auth.users u
+      where (u.id::text like '11111111-1111-4111-8111-%'
+          or u.id::text like '22222222-2222-4222-8222-%')
+        and not exists (
+          select 1
+          from auth.identities i
+          where i.user_id = u.id and i.provider = 'email'
+        )
+    $sql$;
+  end if;
+end
+$$;
 
 -- Codes publics lisibles, uniquement pour la démonstration. En production ils
 -- sont tirés au hasard par assign_public_code().

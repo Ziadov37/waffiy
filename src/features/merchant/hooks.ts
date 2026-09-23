@@ -4,7 +4,9 @@ import { useMyMerchant } from '@/features/auth/hooks';
 import { queryKeys } from '@/lib/query-client';
 import {
   createProgram,
+  deleteProgram,
   fetchActivity,
+  fetchCustomer,
   fetchCustomerHistory,
   fetchCustomerProgress,
   fetchCustomers,
@@ -13,7 +15,9 @@ import {
   fetchStats,
   fetchThresholdImpact,
   setProgramThreshold,
+  updateMerchantDetails,
   updateProgram,
+  uploadMerchantLogo,
   type ActivityFilter,
   type CustomerFilter,
   type ProgramInput,
@@ -35,7 +39,9 @@ export function useStats() {
   });
 }
 
-export function useActivity(options: { filter?: ActivityFilter; todayOnly?: boolean } = {}) {
+export function useActivity(
+  options: { filter?: ActivityFilter; todayOnly?: boolean } = {},
+) {
   const merchantId = useMerchantId();
   const { filter = 'all', todayOnly = false } = options;
   return useQuery({
@@ -59,11 +65,12 @@ export function useCustomerDetail(profileId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.customer(merchantId ?? '', profileId ?? ''),
     queryFn: async () => {
-      const [history, progress] = await Promise.all([
+      const [customer, history, progress] = await Promise.all([
+        fetchCustomer(merchantId as string, profileId as string),
         fetchCustomerHistory(merchantId as string, profileId as string),
         fetchCustomerProgress(merchantId as string, profileId as string),
       ]);
-      return { history, progress };
+      return { customer, history, progress };
     },
     enabled: Boolean(merchantId && profileId),
   });
@@ -84,13 +91,46 @@ export function usePrograms() {
   });
 }
 
+export function useUpdateMerchantDetails() {
+  const merchantId = useMerchantId();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: Parameters<typeof updateMerchantDetails>[1]) =>
+      updateMerchantDetails(merchantId as string, patch),
+    onSuccess: (merchant) => {
+      queryClient.setQueryData(queryKeys.merchant, merchant);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cards });
+    },
+  });
+}
+
+export function useUploadMerchantLogo() {
+  const merchantId = useMerchantId();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { uri: string; mimeType: string }) =>
+      uploadMerchantLogo(merchantId as string, input.uri, input.mimeType),
+    onSuccess: (merchant) => {
+      queryClient.setQueryData(queryKeys.merchant, merchant);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cards });
+    },
+  });
+}
+
 function useInvalidatePrograms() {
   const queryClient = useQueryClient();
   const merchantId = useMerchantId();
   return () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.programs(merchantId ?? '') });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.programs(merchantId ?? ''),
+    });
     // Un programme publié, archivé ou renommé change ce que voient les clients.
     void queryClient.invalidateQueries({ queryKey: queryKeys.cards });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.customers(merchantId ?? ''),
+    });
+    void queryClient.invalidateQueries({ queryKey: ['scan', merchantId ?? ''] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.stats(merchantId ?? '') });
   };
 }
 
@@ -113,6 +153,11 @@ export function useUpdateProgram() {
     },
     onSuccess: invalidate,
   });
+}
+
+export function useDeleteProgram() {
+  const invalidate = useInvalidatePrograms();
+  return useMutation({ mutationFn: deleteProgram, onSuccess: invalidate });
 }
 
 export function useThresholdImpact(programId: string | undefined, threshold: number) {

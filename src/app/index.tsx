@@ -30,9 +30,14 @@ export default function Index() {
     );
   }
 
-  if (merchant && activeRole === 'merchant') {
-    return <Redirect href="/(merchant)" />;
+  // Si l'utilisateur possède un commerce, le rediriger vers l'interface commerçant
+  // par défaut, sauf s'il a explicitement choisi l'interface client
+  if (merchant) {
+    if (activeRole === 'client') {
+      return <Redirect href="/(client)/(tabs)" />;
+    }
+    return <Redirect href="/(merchant)/(tabs)" />;
   }
 
-  return <Redirect href="/(client)" />;
+  return <Redirect href="/(client)/(tabs)" />;
 }

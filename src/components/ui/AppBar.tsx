@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { colors, minTouchTarget, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
 
@@ -36,56 +36,60 @@ export function AppBar({
 
   return (
     <View style={styles.bar}>
-      {showBack ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={closeIcon ? 'Fermer' : 'Retour'}
-          onPress={goBack}
-          style={styles.button}
-          hitSlop={8}
-        >
-          <Icon name={closeIcon ? 'close' : 'arrow-left'} color={colors.ink} size={20} />
-        </Pressable>
-      ) : (
-        <View style={styles.spacer} />
-      )}
-
-      <View style={styles.titles}>
+      <View style={styles.topRow}>
+        {showBack ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={closeIcon ? 'Fermer' : 'Retour'}
+            onPress={goBack}
+            style={styles.button}
+            hitSlop={8}
+          >
+            <Icon
+              name={closeIcon ? 'close' : 'arrow-left'}
+              color={colors.ink}
+              size={18}
+            />
+          </Pressable>
+        ) : null}
         {eyebrow ? (
-          <Text variant="caption" tone="tertiary">
+          <Text variant="caption" tone="tertiary" style={styles.eyebrow}>
             {eyebrow}
           </Text>
         ) : null}
-        {title ? (
-          <Text variant="heading" numberOfLines={1}>
-            {title}
-          </Text>
-        ) : null}
+        <View style={styles.right}>{right}</View>
       </View>
-
-      <View style={styles.right}>{right}</View>
+      {title ? (
+        <Text variant="title" numberOfLines={2}>
+          {title}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
+    gap: 18,
+    paddingTop: 18,
+    paddingBottom: 4,
   },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   button: {
-    width: minTouchTarget,
-    height: minTouchTarget,
-    borderRadius: radius.md,
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     borderWidth: 1,
     borderColor: colors.borderInput,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  spacer: { width: 0 },
-  titles: { flex: 1 },
-  right: { minWidth: 0 },
+  eyebrow: {
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1.54,
+    textTransform: 'uppercase',
+  },
+  right: { minWidth: 0, marginLeft: 'auto' },
 });

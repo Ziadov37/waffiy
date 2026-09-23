@@ -1,6 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { z } from 'zod';
+
+import { secureStorage } from '@/lib/secure-storage';
 
 const STORAGE_KEY = 'waffiy.pending-actions';
 
@@ -31,8 +32,10 @@ const pendingActionSchema = z.object({
   merchantId: z.string().uuid(),
   programId: z.string().uuid(),
   programName: z.string(),
+  quantity: z.number().int().min(1).max(100).optional(),
   clientCode: z.string(),
   clientName: z.string(),
+  staffSessionToken: z.string().optional(),
   createdAt: z.string(),
   attempts: z.number().int().min(0),
   status: z.enum(['pending', 'failed']),
@@ -49,7 +52,7 @@ export function newRequestId(): string {
 
 export async function readQueue(): Promise<PendingAction[]> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const raw = await secureStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = queueSchema.safeParse(JSON.parse(raw));
     // Une file corrompue — par exemple après un changement de format — est
@@ -63,7 +66,7 @@ export async function readQueue(): Promise<PendingAction[]> {
 }
 
 async function writeQueue(actions: PendingAction[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(actions));
+  await secureStorage.setItem(STORAGE_KEY, JSON.stringify(actions));
 }
 
 export async function enqueue(
@@ -106,5 +109,5 @@ export async function markRetrying(requestId: string): Promise<void> {
 }
 
 export async function clearQueue(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+  await secureStorage.removeItem(STORAGE_KEY);
 }

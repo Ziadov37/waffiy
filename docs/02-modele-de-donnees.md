@@ -11,14 +11,14 @@ voir § 9.
 
 ## 0. Décisions d'architecture validées
 
-| # | Décision | Effet sur le schéma |
-|---|---|---|
-| D1 | **Authentification par code à usage unique envoyé par email**, sans mot de passe | Aucune colonne mot de passe ; `auth.users.email` est l'identifiant unique. Voir § 15. |
-| D2 | **Le rôle est une capacité dérivée**, pas une colonne | Pas de `profiles.role` ; commerçant ⇔ `merchants.owner_id = auth.uid()` |
-| D3 | **Code client aléatoire et statique, sans donnée personnelle** | `profiles.public_code`, 10 caractères aléatoires ; le QR ne porte que ce code |
-| D4 | **Pas de gestion d'équipe** | Pas de table `merchant_staff` ; `merchants.owner_id` ; `transactions.actor_profile_id` en audit seul |
-| D5 | **Inscription uniquement par scan du QR du commerce par le client** | `join_merchant()` est la seule création de `memberships` ; `credit_visit()` refuse un non-inscrit |
-| D6 | **Inscription à tous les programmes actifs d'un coup** | `join_merchant()` crée une ligne `program_progress` par programme `active` |
+| #   | Décision                                                            | Effet sur le schéma                                                                                            |
+| --- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| D1  | **Code email à l'inscription, puis identifiant + mot de passe**     | Supabase Auth porte le mot de passe ; `profiles.phone` est un alias facultatif résolu côté serveur. Voir § 15. |
+| D2  | **Le rôle est une capacité dérivée**, pas une colonne               | Pas de `profiles.role` ; commerçant ⇔ `merchants.owner_id = auth.uid()`                                        |
+| D3  | **Code client aléatoire et statique, sans donnée personnelle**      | `profiles.public_code`, 10 caractères aléatoires ; le QR ne porte que ce code                                  |
+| D4  | **Équipe locale par PIN**                                           | `merchant_staff`, sessions révocables et `transactions.actor_staff_id` pour l'audit                            |
+| D5  | **Inscription uniquement par scan du QR du commerce par le client** | `join_merchant()` est la seule création de `memberships` ; `credit_visit()` refuse un non-inscrit              |
+| D6  | **Inscription à tous les programmes actifs d'un coup**              | `join_merchant()` crée une ligne `program_progress` par programme `active`                                     |
 
 ---
 
@@ -41,20 +41,20 @@ qui le référencent.
 
 Extension 1–1 de `auth.users`. Créée par un déclencheur `on auth.users insert`.
 
-| Colonne | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | → `auth.users(id)` `on delete cascade` |
-| `first_name` | `text` not null | |
-| `last_name` | `text` not null | |
-| `phone` | `text` unique | nullable — non vérifié en phase 1 (voir C1) |
-| `email` | `text` | copie dénormalisée de `auth.users.email`, pour l'affichage |
-| `avatar_url` | `text` | |
-| `public_code` | `text` not null unique | identifiant du QR client — **aléatoire**, pas séquentiel (voir C3) |
-| `locale` | `text` not null default `'fr'` | |
-| `is_platform_admin` | `boolean` not null default `false` | crochet phase 2 |
-| `deleted_at` | `timestamptz` | anonymisation RGPD sans perte du registre |
+| Colonne             | Type                               | Notes                                                              |
+| ------------------- | ---------------------------------- | ------------------------------------------------------------------ |
+| `id`                | `uuid` PK                          | → `auth.users(id)` `on delete cascade`                             |
+| `first_name`        | `text` not null                    |                                                                    |
+| `last_name`         | `text` not null                    |                                                                    |
+| `phone`             | `text` unique normalisé            | nullable — alias de connexion, non vérifié par SMS                 |
+| `email`             | `text`                             | copie dénormalisée de `auth.users.email`, pour l'affichage         |
+| `avatar_url`        | `text`                             |                                                                    |
+| `public_code`       | `text` not null unique             | identifiant du QR client — **aléatoire**, pas séquentiel (voir C3) |
+| `locale`            | `text` not null default `'fr'`     |                                                                    |
+| `is_platform_admin` | `boolean` not null default `false` | crochet phase 2                                                    |
+| `deleted_at`        | `timestamptz`                      | anonymisation RGPD sans perte du registre                          |
 
-Index : `unique(public_code)`, `unique(phone) where phone is not null`.
+Index : `unique(public_code)`, unicité des chiffres de `phone` quand il n'est pas nul.
 
 `public_code` : 10 caractères en base32 sans caractères ambigus (`0`, `O`, `1`, `I`, `L`), soit
 environ 5 × 10¹⁴ combinaisons. Affiché `WFY-XXXXX-XXXXX`. Assez d'entropie pour rendre l'énumération
@@ -69,59 +69,56 @@ une capacité dérivée** (C4), ce qui permet à un commerçant de collecter aus
 
 ## 3. `merchants` — le commerce
 
-| Colonne | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `name` | `text` not null | |
-| `category` | `merchant_category` not null | |
-| `city` | `text` not null | |
-| `phone` | `text` | |
-| `logo_url` | `text` | Supabase Storage, bucket public `merchant-logos` |
-| `join_code` | `text` not null unique | charge utile du QR d'inscription en vitrine |
-| `status` | `merchant_status` not null default `'active'` | suspension par le super admin |
-| `timezone` | `text` not null default `'Africa/Algiers'` | compteurs « du jour » (C9) |
-| `min_credit_interval_seconds` | `int` | `null` = hérite du réglage global (règle 6) |
-| `owner_id` | `uuid` not null → `profiles(id)` | **le compte unique du commerce** (voir § 4) |
+| Colonne                       | Type                                          | Notes                                            |
+| ----------------------------- | --------------------------------------------- | ------------------------------------------------ |
+| `id`                          | `uuid` PK                                     |                                                  |
+| `name`                        | `text` not null                               |                                                  |
+| `category`                    | `merchant_category` not null                  |                                                  |
+| `city`                        | `text` not null                               |                                                  |
+| `phone`                       | `text`                                        |                                                  |
+| `logo_url`                    | `text`                                        | Supabase Storage, bucket public `merchant-logos` |
+| `join_code`                   | `text` not null unique                        | charge utile du QR d'inscription en vitrine      |
+| `status`                      | `merchant_status` not null default `'active'` | suspension par le super admin                    |
+| `timezone`                    | `text` not null default `'Africa/Algiers'`    | compteurs « du jour » (C9)                       |
+| `min_credit_interval_seconds` | `int`                                         | `null` = hérite du réglage global (règle 6)      |
+| `owner_id`                    | `uuid` not null → `profiles(id)`              | **le compte unique du commerce** (voir § 4)      |
 
 Index : `unique(join_code)`, `(owner_id)` — lu par **chaque** vérification RLS —, `(status)`,
 `(city, category)` pour la découverte future.
 
 ---
 
-## 4. Équipe — écartée par décision
+## 4. Équipe — propriétaire et accès caissiers
 
-Le cahier des charges prévoyait une attribution des actions à un membre du personnel (règle 5). Vous
-avez tranché pour la suppression : **un commerce = un compte**, porté par `merchants.owner_id`.
+Le propriétaire reste le seul compte Supabase du commerce. Depuis Réglages → Équipe, il crée des
+accès caissiers nominatifs protégés par un PIN de 4 à 6 chiffres. Le PIN est haché avec bcrypt et
+n'est jamais retourné par l'API.
 
-Conséquences assumées :
-- l'historique de la fiche client perd sa colonne « Karim / Amina » par rapport au prototype ;
-- l'entrée « Équipe — 3 membres » disparaît de l'écran Réglages ;
-- en caisse, plusieurs personnes partagent le même compte.
+`merchant_staff` contient le nom, l'état actif et les dates de création ou révocation.
+`merchant_staff_sessions` contient uniquement un hash du jeton de session, une expiration à 12 h
+et la date de révocation. Chaque crédit ou consommation valide le jeton côté serveur ; désactiver un
+caissier invalide donc immédiatement toutes ses sessions.
 
-Ce qui est malgré tout conservé : `transactions.actor_profile_id`, colonne d'**audit pure, jamais
-affichée dans l'application**. Elle vaudra toujours `owner_id` en phase 1, et permettra au super
-admin d'enquêter sur une fraude en phase 2 sans migration du registre.
-
-Réintroduire une équipe plus tard restera une migration additive : une table pivot
-`merchant_staff(merchant_id, profile_id, role)`, et `auth_is_merchant_operator()` interroge la table
-au lieu de `merchants.owner_id`. Aucune donnée historique n'est perdue puisque `actor_profile_id`
-existe déjà.
+`transactions.actor_profile_id` conserve le propriétaire authentifié et
+`transactions.actor_staff_id` identifie le caissier lorsqu'une opération est faite en mode caisse.
+L'historique affiche ainsi le nom de l'opérateur. Le mode caisse donne accès au scan, au crédit et à
+la consommation ; le mot de passe propriétaire est requis pour revenir aux réglages.
 
 ---
 
 ## 5. `programs` — les programmes de fidélité
 
-| Colonne | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `merchant_id` | `uuid` not null → `merchants` `on delete cascade` | |
-| `name` | `text` not null | « Burger gratuit » — c'est le libellé de la récompense |
-| `emoji` | `text` not null default `'🎁'` | |
-| `description` | `text` | |
-| `threshold` | `int` not null | `check between 2 and 50` |
-| `status` | `program_status` not null default `'draft'` | |
-| `surface_color` / `border_color` | `text` | « Apparence de la carte » du design |
-| `sort_order` | `int` not null default 0 | |
+| Colonne                          | Type                                              | Notes                                                  |
+| -------------------------------- | ------------------------------------------------- | ------------------------------------------------------ |
+| `id`                             | `uuid` PK                                         |                                                        |
+| `merchant_id`                    | `uuid` not null → `merchants` `on delete cascade` |                                                        |
+| `name`                           | `text` not null                                   | « Burger gratuit » — c'est le libellé de la récompense |
+| `emoji`                          | `text` not null default `'🎁'`                    |                                                        |
+| `description`                    | `text`                                            |                                                        |
+| `threshold`                      | `int` not null                                    | `check between 2 and 50`                               |
+| `status`                         | `program_status` not null default `'draft'`       |                                                        |
+| `surface_color` / `border_color` | `text`                                            | « Apparence de la carte » du design                    |
+| `sort_order`                     | `int` not null default 0                          |                                                        |
 
 Index : `(merchant_id, status)`, `(merchant_id, sort_order)`.
 
@@ -132,13 +129,13 @@ Index : `(merchant_id, status)`, `(merchant_id, sort_order)`.
 Une ligne par couple (client, commerce). **C'est l'objet « carte » de l'interface** : le design
 montre une carte par commerce, qui agrège plusieurs programmes.
 
-| Colonne | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `profile_id` | `uuid` not null → `profiles` | |
-| `merchant_id` | `uuid` not null → `merchants` | |
-| `joined_at` | `timestamptz` not null default `now()` | « Cliente depuis mars 2026 » |
-| `last_activity_at` | `timestamptz` | tri de « Mes cartes » et de « Clients » |
+| Colonne            | Type                                   | Notes                                   |
+| ------------------ | -------------------------------------- | --------------------------------------- |
+| `id`               | `uuid` PK                              |                                         |
+| `profile_id`       | `uuid` not null → `profiles`           |                                         |
+| `merchant_id`      | `uuid` not null → `merchants`          |                                         |
+| `joined_at`        | `timestamptz` not null default `now()` | « Cliente depuis mars 2026 »            |
+| `last_activity_at` | `timestamptz`                          | tri de « Mes cartes » et de « Clients » |
 
 Contrainte : `unique(profile_id, merchant_id)`.
 Index : `(profile_id, last_activity_at desc)`, `(merchant_id, last_activity_at desc)`.
@@ -149,16 +146,16 @@ Index : `(profile_id, last_activity_at desc)`, `(merchant_id, last_activity_at d
 
 Une ligne par couple (client, programme). **Aucune écriture directe : uniquement par les fonctions.**
 
-| Colonne | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `profile_id` | `uuid` not null → `profiles` | |
-| `program_id` | `uuid` not null → `programs` | |
-| `merchant_id` | `uuid` not null → `merchants` | dénormalisé : évite une jointure dans **chaque** politique RLS |
-| `stamps` | `int` not null default 0 | `check (stamps >= 0)` — solde courant |
-| `lifetime_stamps` | `int` not null default 0 | cumul, jamais décrémenté (statistique « Total visites ») |
-| `rewards_redeemed` | `int` not null default 0 | |
-| `last_credit_at` | `timestamptz` | **c'est la colonne que lit l'anti-fraude** (règle 6) |
+| Colonne            | Type                          | Notes                                                          |
+| ------------------ | ----------------------------- | -------------------------------------------------------------- |
+| `id`               | `uuid` PK                     |                                                                |
+| `profile_id`       | `uuid` not null → `profiles`  |                                                                |
+| `program_id`       | `uuid` not null → `programs`  |                                                                |
+| `merchant_id`      | `uuid` not null → `merchants` | dénormalisé : évite une jointure dans **chaque** politique RLS |
+| `stamps`           | `int` not null default 0      | `check (stamps >= 0)` — solde courant                          |
+| `lifetime_stamps`  | `int` not null default 0      | cumul, jamais décrémenté (statistique « Total visites »)       |
+| `rewards_redeemed` | `int` not null default 0      |                                                                |
+| `last_credit_at`   | `timestamptz`                 | **c'est la colonne que lit l'anti-fraude** (règle 6)           |
 
 Contrainte : `unique(profile_id, program_id)`.
 Index : `(merchant_id, program_id)`, `(profile_id)`, et un index partiel
@@ -176,24 +173,25 @@ Un déclencheur garantit sa cohérence avec `programs.merchant_id`.
 `program_progress` est un cache dérivable de cette table — en cas de doute, c'est le registre qui
 fait foi, et il est rejouable.
 
-| Colonne | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `merchant_id` | `uuid` not null → `merchants` | |
-| `program_id` | `uuid` not null → `programs` | |
-| `profile_id` | `uuid` not null → `profiles` | le client |
-| `actor_profile_id` | `uuid` not null → `profiles` | **audit uniquement, jamais affiché** (voir § 4) |
-| `kind` | `transaction_kind` not null | |
-| `delta` | `int` not null | `+1` au crédit, `-seuil` à la consommation |
-| `stamps_before` / `stamps_after` | `int` not null | audit, et reconstruction sans rejeu |
-| `threshold_at_time` | `int` not null | **instantané du seuil** — l'historique reste vrai si le seuil change (règle 4) |
-| `reward_label` | `text` | instantané du nom de la récompense, au `redeem` |
-| `client_request_id` | `uuid` not null unique | **clé d'idempotence** — le cœur du hors ligne (C5) |
-| `source` | `text` not null default `'scan'` | `scan`, `manual`, `offline_sync` |
-| `note` | `text` | motif d'un `adjust` |
-| `created_at` | `timestamptz` not null default `now()` | horodatage (règle 5) |
+| Colonne                          | Type                                   | Notes                                                                          |
+| -------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------ |
+| `id`                             | `uuid` PK                              |                                                                                |
+| `merchant_id`                    | `uuid` not null → `merchants`          |                                                                                |
+| `program_id`                     | `uuid` not null → `programs`           |                                                                                |
+| `profile_id`                     | `uuid` not null → `profiles`           | le client                                                                      |
+| `actor_profile_id`               | `uuid` not null → `profiles`           | **audit uniquement, jamais affiché** (voir § 4)                                |
+| `kind`                           | `transaction_kind` not null            |                                                                                |
+| `delta`                          | `int` not null                         | `+1` au crédit, `-seuil` à la consommation                                     |
+| `stamps_before` / `stamps_after` | `int` not null                         | audit, et reconstruction sans rejeu                                            |
+| `threshold_at_time`              | `int` not null                         | **instantané du seuil** — l'historique reste vrai si le seuil change (règle 4) |
+| `reward_label`                   | `text`                                 | instantané du nom de la récompense, au `redeem`                                |
+| `client_request_id`              | `uuid` not null unique                 | **clé d'idempotence** — le cœur du hors ligne (C5)                             |
+| `source`                         | `text` not null default `'scan'`       | `scan`, `manual`, `offline_sync`                                               |
+| `note`                           | `text`                                 | motif d'un `adjust`                                                            |
+| `created_at`                     | `timestamptz` not null default `now()` | horodatage (règle 5)                                                           |
 
 Index :
+
 - `unique(client_request_id)` — **c'est cette contrainte qui rend le rejeu hors ligne inoffensif**
 - `(merchant_id, created_at desc)` — flux d'activité
 - `(profile_id, created_at desc)` — historique client
@@ -208,17 +206,17 @@ raconte une histoire fausse.
 
 ## 9. `notifications`
 
-| Colonne | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `profile_id` | `uuid` not null → `profiles` | destinataire |
-| `merchant_id` / `program_id` | `uuid` | contexte, nullable |
-| `transaction_id` | `uuid` → `transactions` | trace vers l'action d'origine |
-| `kind` | `notification_kind` not null | l'emoji et la teinte en découlent côté client |
-| `title` / `body` | `text` not null | rendus en français côté serveur |
-| `data` | `jsonb` not null default `'{}'` | charge de lien profond |
-| `read_at` | `timestamptz` | |
-| `pushed_at` | `timestamptz` | date d'envoi effectif à Expo |
+| Colonne                      | Type                            | Notes                                         |
+| ---------------------------- | ------------------------------- | --------------------------------------------- |
+| `id`                         | `uuid` PK                       |                                               |
+| `profile_id`                 | `uuid` not null → `profiles`    | destinataire                                  |
+| `merchant_id` / `program_id` | `uuid`                          | contexte, nullable                            |
+| `transaction_id`             | `uuid` → `transactions`         | trace vers l'action d'origine                 |
+| `kind`                       | `notification_kind` not null    | l'emoji et la teinte en découlent côté client |
+| `title` / `body`             | `text` not null                 | rendus en français côté serveur               |
+| `data`                       | `jsonb` not null default `'{}'` | charge de lien profond                        |
+| `read_at`                    | `timestamptz`                   |                                               |
+| `pushed_at`                  | `timestamptz`                   | date d'envoi effectif à Expo                  |
 
 Index : `(profile_id, created_at desc)`, `(profile_id) where read_at is null` (le compteur du
 badge), `(id) where pushed_at is null` (la file d'envoi push).
@@ -227,33 +225,33 @@ badge), `(id) where pushed_at is null` (la file d'envoi push).
 
 ## 10. `push_tokens`
 
-| Colonne | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `profile_id` | `uuid` not null → `profiles` `on delete cascade` | |
-| `token` | `text` not null unique | `ExponentPushToken[…]` |
-| `platform` | `text` not null | `ios` / `android` |
-| `device_id` | `text` | |
-| `last_seen_at` | `timestamptz` not null default `now()` | |
-| `disabled_at` | `timestamptz` | mis à jour quand Expo renvoie `DeviceNotRegistered` |
+| Colonne        | Type                                             | Notes                                               |
+| -------------- | ------------------------------------------------ | --------------------------------------------------- |
+| `id`           | `uuid` PK                                        |                                                     |
+| `profile_id`   | `uuid` not null → `profiles` `on delete cascade` |                                                     |
+| `token`        | `text` not null unique                           | `ExponentPushToken[…]`                              |
+| `platform`     | `text` not null                                  | `ios` / `android`                                   |
+| `device_id`    | `text`                                           |                                                     |
+| `last_seen_at` | `timestamptz` not null default `now()`           |                                                     |
+| `disabled_at`  | `timestamptz`                                    | mis à jour quand Expo renvoie `DeviceNotRegistered` |
 
 ---
 
 ## 11. `app_settings` — paramétrage serveur global
 
-| Colonne | Type |
-|---|---|
-| `key` | `text` PK |
-| `value` | `jsonb` not null |
-| `updated_at` | `timestamptz` |
+| Colonne      | Type             |
+| ------------ | ---------------- |
+| `key`        | `text` PK        |
+| `value`      | `jsonb` not null |
+| `updated_at` | `timestamptz`    |
 
 Valeurs initiales :
 
-| Clé | Valeur | Rôle |
-|---|---|---|
-| `min_credit_interval_seconds` | `300` | délai anti-fraude par défaut (règle 6), surchargeable par commerce |
-| `almost_there_remaining` | `1` | déclenche la notification « Plus qu'une visite ! » |
-| `max_credit_per_call` | `1` | plafond de visites par appel (voir Q7) |
+| Clé                           | Valeur | Rôle                                                               |
+| ----------------------------- | ------ | ------------------------------------------------------------------ |
+| `min_credit_interval_seconds` | `300`  | délai anti-fraude par défaut (règle 6), surchargeable par commerce |
+| `almost_there_remaining`      | `1`    | déclenche la notification « Plus qu'une visite ! »                 |
+| `max_credit_per_call`         | `1`    | plafond de visites par appel (voir Q7)                             |
 
 Aucune politique RLS : la table n'est lisible que par les fonctions `SECURITY DEFINER` et, en
 phase 2, par le super admin. C'est le sens de « paramétrable côté serveur ».
@@ -265,6 +263,7 @@ phase 2, par le super admin. C'est le sens de « paramétrable côté serveur »
 Toutes en `SECURITY DEFINER`, `search_path = public, pg_temp`, propriétaire dédié.
 
 ### Assistants de RLS
+
 ```
 auth_is_merchant_operator(p_merchant uuid) → boolean  -- STABLE, vrai si auth.uid() = merchants.owner_id
 auth_is_platform_admin()          → boolean      -- crochet phase 2
@@ -292,6 +291,7 @@ Le tout dans **une seule transaction** : une erreur à l'étape 9 annule le cré
 ### `redeem_reward(p_client_code text, p_program uuid, p_request_id uuid)`
 
 Mêmes contrôles d'accès et même idempotence, puis :
+
 - refuse si `stamps < threshold` → `INSUFFICIENT_STAMPS` ;
 - `delta = -threshold` — **le surplus est conservé** : 11 tampons sur un seuil de 10 laissent 1
   (règle 3) ;
@@ -331,30 +331,32 @@ l'avertissement de la règle 4. L'appel effectif exige un drapeau `p_confirmed`.
 
 ## 13. Sécurité au niveau ligne — principes
 
-| Table | Client | Exploitant du commerce | Écriture directe |
-|---|---|---|---|
-| `profiles` | la sienne | vue restreinte via fonction | soi-même |
-| `merchants` | lecture publique des `active`, colonnes limitées | son commerce | le propriétaire |
-| `programs` | les `active` des commerces où il est inscrit | les siens | le propriétaire |
-| `memberships` | les siennes | celles de son commerce | fonctions uniquement |
-| `program_progress` | les siennes | celles de son commerce | **aucune** — fonctions uniquement |
-| `transactions` | les siennes | celles de son commerce | **aucune** — append-only par fonction |
-| `notifications` | les siennes | ✗ | `update read_at` sur les siennes |
-| `push_tokens` | les siens | ✗ | les siens |
-| `app_settings` | ✗ | ✗ | ✗ |
+| Table              | Client                                           | Exploitant du commerce      | Écriture directe                      |
+| ------------------ | ------------------------------------------------ | --------------------------- | ------------------------------------- |
+| `profiles`         | la sienne                                        | vue restreinte via fonction | soi-même                              |
+| `merchants`        | lecture publique des `active`, colonnes limitées | son commerce                | le propriétaire                       |
+| `programs`         | les `active` des commerces où il est inscrit     | les siens                   | le propriétaire                       |
+| `memberships`      | les siennes                                      | celles de son commerce      | fonctions uniquement                  |
+| `program_progress` | les siennes                                      | celles de son commerce      | **aucune** — fonctions uniquement     |
+| `transactions`     | les siennes                                      | celles de son commerce      | **aucune** — append-only par fonction |
+| `notifications`    | les siennes                                      | ✗                           | `update read_at` sur les siennes      |
+| `push_tokens`      | les siens                                        | ✗                           | les siens                             |
+| `app_settings`     | ✗                                                | ✗                           | ✗                                     |
 
 Deux règles structurantes :
+
 1. **Aucun rôle applicatif ne peut écrire dans `program_progress` ni `transactions`.** Les seuls
    chemins d'écriture sont les fonctions `SECURITY DEFINER`. C'est ce qui rend la règle 1 vraie
    même si un client bricole la clé anonyme.
 2. Les politiques passent toutes par `auth_is_merchant_operator()`, déclarée `STABLE SECURITY
-   DEFINER`, pour éviter qu'une politique sur `merchants` ne relise `merchants` récursivement.
+DEFINER`, pour éviter qu'une politique sur `merchants` ne relise `merchants` récursivement.
 
 ---
 
 ## 14. Greffe du back-office super admin (phase 2)
 
 Prévu sans refonte :
+
 - `profiles.is_platform_admin` + `auth_is_platform_admin()` : chaque politique reçoit une clause
   `or auth_is_platform_admin()` ajoutée en une migration, sans toucher au schéma ;
 - `merchants.status = 'suspended'` : le levier de suspension existe déjà et est vérifié par
@@ -371,29 +373,33 @@ lui-même, et des vues matérialisées pour les statistiques agrégées inter-co
 
 ---
 
-## 15. Authentification — code à usage unique par email (D1)
+## 15. Authentification — confirmation puis mot de passe (D1)
 
-Flux retenu : `signInWithOtp({ email })` puis `verifyOtp({ email, token, type: 'email' })`.
-**Code à 6 chiffres, pas de lien magique** — un lien magique impose un lien profond, fragile sur
-mobile et cassé si l'email s'ouvre dans un autre navigateur que celui de l'appareil.
+À l'inscription : `signUp({ email, password })`, puis
+`verifyOtp({ email, token, type: 'signup' })`. Le modèle d'email affiche `{{ .Token }}` : le code à
+6 chiffres se recopie dans l'application sans dépendre d'un lien profond.
+
+Aux connexions suivantes : `signInWithPassword({ email, password })`. Si l'utilisateur saisit son
+téléphone, l'Edge Function `login-with-phone` résout l'email avec `service_role`, sans le renvoyer au
+client, puis délègue la vérification du mot de passe au même endpoint Supabase Auth. La fonction SQL
+de résolution n'est exécutable ni par `anon`, ni par `authenticated`.
 
 Conséquences sur le design :
-- les champs « Mot de passe » et le lien « Mot de passe oublié ? » disparaissent des écrans de
-  connexion client et commerçant ;
-- l'inscription client reste en 2 étapes, mais l'étape 2 devient la saisie du code reçu par email
-  au lieu du code SMS ;
-- l'inscription commerçant reste en 3 étapes, la dernière ne demandant plus qu'un email.
+
+- les écrans de connexion demandent « Email ou téléphone » et « Mot de passe » ;
+- l'inscription client demande l'email, un téléphone facultatif et le mot de passe avant le code ;
+- l'inscription commerçant conserve ses 3 étapes et vérifie l'email avant de créer le commerce ;
+- aucun code n'est envoyé lors d'une connexion ordinaire.
 
 **Point de vigilance sur le palier gratuit.** Le serveur d'email intégré à Supabase est bridé à
-quelques envois par heure et explicitement réservé au développement : en l'état, une connexion par
-code échouerait dès les premiers utilisateurs réels. Il faut donc configurer un **SMTP externe
-gratuit** dès l'étape 2 :
+quelques envois par heure et explicitement réservé au développement. Il faut donc configurer un
+**SMTP externe gratuit** pour les confirmations d'inscription et la récupération de mot de passe :
 
-| Fournisseur | Palier gratuit | Remarque |
-|---|---|---|
-| Brevo | 300 emails/jour, permanent | recommandé — le quota quotidien ne s'épuise pas |
-| Resend | 3 000 emails/mois | quota mensuel, plus vite atteint |
-| Mailjet | 200 emails/jour | fiable, interface plus austère |
+| Fournisseur | Palier gratuit             | Remarque                                        |
+| ----------- | -------------------------- | ----------------------------------------------- |
+| Brevo       | 300 emails/jour, permanent | recommandé — le quota quotidien ne s'épuise pas |
+| Resend      | 3 000 emails/mois          | quota mensuel, plus vite atteint                |
+| Mailjet     | 200 emails/jour            | fiable, interface plus austère                  |
 
 La configuration SMTP vit dans les réglages du projet Supabase, jamais dans le code mobile.
 

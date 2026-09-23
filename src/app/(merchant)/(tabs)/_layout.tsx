@@ -1,6 +1,7 @@
 import { Tabs, useRouter } from 'expo-router';
 
 import { TabBar, type TabItem } from '@/components/ui';
+import { useStaffSessionStore } from '@/stores/staff-session';
 
 const ITEMS: readonly TabItem[] = [
   { name: 'index', label: 'Accueil', icon: 'home' },
@@ -11,6 +12,8 @@ const ITEMS: readonly TabItem[] = [
 
 export default function MerchantTabsLayout() {
   const router = useRouter();
+  const staffSession = useStaffSessionStore((state) => state.session);
+  const items = staffSession ? ITEMS.slice(0, 1) : ITEMS;
 
   return (
     <Tabs
@@ -18,7 +21,7 @@ export default function MerchantTabsLayout() {
       tabBar={(props) => (
         <TabBar
           {...props}
-          items={ITEMS}
+          items={items}
           center={{
             label: 'SCAN',
             icon: 'scan',
@@ -29,9 +32,9 @@ export default function MerchantTabsLayout() {
       )}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="customers" />
-      <Tabs.Screen name="activity" />
-      <Tabs.Screen name="settings" />
+      <Tabs.Screen name="customers" options={staffSession ? { href: null } : {}} />
+      <Tabs.Screen name="activity" options={staffSession ? { href: null } : {}} />
+      <Tabs.Screen name="settings" options={staffSession ? { href: null } : {}} />
     </Tabs>
   );
 }

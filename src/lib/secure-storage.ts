@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 /**
@@ -13,6 +14,7 @@ import * as SecureStore from 'expo-secure-store';
  */
 const CHUNK_SIZE = 1800;
 const COUNT_SUFFIX = '__chunks';
+const isWeb = Platform.OS === 'web';
 
 async function clearChunks(key: string, count: number): Promise<void> {
   const deletions: Promise<void>[] = [];
@@ -30,6 +32,14 @@ async function readCount(key: string): Promise<number> {
 
 export const secureStorage = {
   async getItem(key: string): Promise<string | null> {
+    if (isWeb) {
+      try {
+        return globalThis.localStorage?.getItem(key) ?? null;
+      } catch {
+        return null;
+      }
+    }
+
     try {
       const count = await readCount(key);
       if (count === 0) return null;
@@ -53,6 +63,11 @@ export const secureStorage = {
   },
 
   async setItem(key: string, value: string): Promise<void> {
+    if (isWeb) {
+      globalThis.localStorage?.setItem(key, value);
+      return;
+    }
+
     const previous = await readCount(key);
 
     const chunks: string[] = [];
@@ -77,6 +92,11 @@ export const secureStorage = {
   },
 
   async removeItem(key: string): Promise<void> {
+    if (isWeb) {
+      globalThis.localStorage?.removeItem(key);
+      return;
+    }
+
     const count = await readCount(key);
     await clearChunks(key, count);
     await SecureStore.deleteItemAsync(`${key}${COUNT_SUFFIX}`);

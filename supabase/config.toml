@@ -160,7 +160,7 @@ site_url = "waffiy://"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["waffiy://", "exp://127.0.0.1:8081"]
+additional_redirect_urls = ["waffiy://", "waffiy://secure-account?emailConfirmed=1", "waffiy://reset-password", "exp://127.0.0.1:8081"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -175,11 +175,11 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-enable_anonymous_sign_ins = false
+enable_anonymous_sign_ins = true
 # Allow/disallow testing manual linking of accounts
-enable_manual_linking = false
-# Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+enable_manual_linking = true
+# Waffiy exige huit caractères dans l'application et côté Auth.
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -195,10 +195,8 @@ password_requirements = ""
 # rp_origins = ["http://127.0.0.1:3000"]
 
 [auth.rate_limit]
-# ATTENTION — c'est le point de rupture de la décision D1 (connexion par code email).
-# Sans SMTP externe, Supabase plafonne à 2 emails par heure : la connexion casserait dès les
-# premiers utilisateurs. Configurer le SMTP ci-dessous (Brevo, 300 emails/jour gratuits) et
-# remonter cette valeur.
+# Les emails ne sont envoyés qu'à l'inscription et pour la récupération future
+# du mot de passe. Un SMTP externe reste nécessaire en production.
 email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
@@ -226,11 +224,11 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-# Waffiy : 60 s entre deux envois, pour ne pas épuiser le quota quotidien du SMTP gratuit.
+# Waffiy : 60 s entre deux confirmations d'inscription ou récupérations.
 max_frequency = "60s"
 # Number of characters used in the email OTP.
 otp_length = 6
@@ -254,6 +252,14 @@ otp_expiry = 600
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.confirmation]
+subject = "Votre code de confirmation Waffiy"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.email_change]
+subject = "Votre code pour sécuriser vos cartes Waffiy"
+content_path = "./supabase/templates/email-change.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
@@ -377,6 +383,11 @@ enabled = false
 authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
+
+[functions.login-with-phone]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/login-with-phone/index.ts"
 
 [edge_runtime]
 enabled = true

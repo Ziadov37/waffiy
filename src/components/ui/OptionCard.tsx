@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { colors, radius, shadows, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { Icon } from './Icon';
 import { Text } from './Text';
 
@@ -28,7 +28,6 @@ export function OptionCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        shadows.card,
         {
           borderColor: selected ? colors.primary : colors.border,
           backgroundColor: selected ? colors.primarySurface : colors.white,
@@ -55,18 +54,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radius.xl,
+    padding: 20,
+    borderRadius: 22,
     borderWidth: 1,
   },
   emojiBox: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceMuted,
+    width: 54,
+    height: 54,
+    borderRadius: 17,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emoji: { fontSize: 24, lineHeight: 30 },
-  body: { flex: 1, gap: 2 },
+  emoji: { fontSize: 25, lineHeight: 31 },
+  body: { flex: 1, gap: 4 },
 });

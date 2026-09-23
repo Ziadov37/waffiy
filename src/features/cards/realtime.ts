@@ -30,13 +30,17 @@ export function useClientRealtime(): void {
         {
           event: '*',
           schema: 'public',
-          table: 'program_progress',
+          table: 'memberships',
           filter: `profile_id=eq.${userId}`,
         },
         () => {
           void queryClient.invalidateQueries({ queryKey: queryKeys.cards });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.rewards });
         },
       )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'programs' }, () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.cards });
+      })
       .on(
         'postgres_changes',
         {

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+  <body
+    style="margin: 0; background: #f7f8fa; font-family: Arial, sans-serif; color: #0f172a"
+  >
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+      <tr>
+        <td align="center" style="padding: 32px 16px">
+          <table
+            role="presentation"
+            width="100%"
+            style="
+              max-width: 480px;
+              background: #fff;
+              border: 1px solid #e6e9f0;
+              border-radius: 20px;
+            "
+          >
+            <tr>
+              <td style="padding: 28px">
+                <p
+                  style="
+                    margin: 0 0 20px;
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #16a36a;
+                  "
+                >
+                  Waffiy
+                </p>
+                <h1 style="margin: 0 0 12px; font-size: 24px">Sécurisez vos cartes</h1>
+                <p style="margin: 0 0 24px; line-height: 1.6; color: #56606f">
+                  Saisissez ce code dans Waffiy pour associer votre email aux cartes déjà
+                  présentes sur votre appareil.
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    padding: 16px;
+                    border-radius: 12px;
+                    background: #effbf4;
+                    text-align: center;
+                    font-size: 30px;
+                    font-weight: 700;
+                    letter-spacing: 8px;
+                    color: #0f7e51;
+                  "
+                >
+                  {{ .Token }}
+                </p>
+                <p
+                  style="
+                    margin: 24px 0 0;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    color: #8a93a3;
+                  "
+                >
+                  Si vous n’avez pas demandé ce code, ignorez cet email.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

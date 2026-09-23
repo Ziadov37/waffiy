@@ -6,6 +6,7 @@ import {
   type PressableProps,
   type ViewStyle,
 } from 'react-native';
+import type { ReactNode } from 'react';
 
 import { colors, minTouchTarget, radius, spacing, typography } from '@/theme';
 import { Text } from './Text';
@@ -22,6 +23,8 @@ export type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
   loadingLabel?: string;
   fullWidth?: boolean;
   style?: ViewStyle;
+  /** Symbole placé à droite, tel que la flèche du prototype. */
+  trailing?: ReactNode;
 };
 
 const SURFACES: Record<Variant, { bg: string; border: string; fg: string }> = {
@@ -42,6 +45,7 @@ export function Button({
   fullWidth = true,
   disabled,
   style,
+  trailing,
   ...rest
 }: ButtonProps) {
   const surface = SURFACES[variant];
@@ -68,11 +72,14 @@ export function Button({
       ]}
       {...rest}
     >
-      <View style={styles.content}>
-        {loading ? <ActivityIndicator size="small" color={surface.fg} /> : null}
-        <Text style={[typography.button, { color: surface.fg }]}>
-          {loading ? (loadingLabel ?? label) : label}
-        </Text>
+      <View style={[styles.content, trailing ? styles.contentSpread : null]}>
+        <View style={styles.labelRow}>
+          {loading ? <ActivityIndicator size="small" color={surface.fg} /> : null}
+          <Text style={[typography.button, { color: surface.fg }]}>
+            {loading ? (loadingLabel ?? label) : label}
+          </Text>
+        </View>
+        {trailing}
       </View>
     </Pressable>
   );
@@ -88,5 +95,13 @@ const styles = StyleSheet.create({
   },
   lg: { paddingVertical: spacing.lg, paddingHorizontal: spacing.xl },
   md: { paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
-  content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  contentSpread: { justifyContent: 'space-between' },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 });

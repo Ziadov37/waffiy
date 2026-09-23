@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/query-client';
 import { useUserId } from '@/features/auth/hooks';
-import { fetchCards, fetchUsedRewards, joinMerchant, type Card } from './api';
+import {
+  fetchCards,
+  fetchPublicMerchant,
+  fetchUsedRewards,
+  joinMerchant,
+  type Card,
+} from './api';
 
 export function useCards() {
   const userId = useUserId();
@@ -28,6 +34,15 @@ export function useUsedRewards() {
     queryKey: queryKeys.rewards,
     queryFn: fetchUsedRewards,
     enabled: Boolean(userId),
+  });
+}
+
+export function usePublicMerchant(joinCode: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.publicMerchant(joinCode ?? ''),
+    queryFn: () => fetchPublicMerchant(joinCode as string),
+    enabled: Boolean(joinCode),
+    staleTime: 1000 * 60 * 5,
   });
 }
 

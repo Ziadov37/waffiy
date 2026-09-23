@@ -15,14 +15,14 @@ waffiy/
 │   │   ├── welcome.tsx                   # accueil marketing
 │   │   ├── role.tsx                      # inscription — choix du rôle
 │   │   ├── role-login.tsx                # connexion — choix du rôle
-│   │   ├── login.tsx                     # saisie de l'email (les deux rôles)
-│   │   ├── verify.tsx                    # code à 6 chiffres reçu par email
+│   │   ├── login.tsx                     # email/téléphone + mot de passe
+│   │   ├── verify.tsx                    # confirmation d'inscription par code email
 │   │   ├── signup-client.tsx             # étape 1 sur 2
 │   │   └── signup-merchant/              # étapes 1 à 3
 │   │       ├── _layout.tsx               # porte l'état du formulaire multi-étapes
 │   │       ├── commerce.tsx              # logo, nom, catégorie, ville, téléphone
 │   │       ├── programme.tsx             # seuil, aperçu client, récompense
-│   │       └── compte.tsx                # email du propriétaire + vérification
+│   │       └── compte.tsx                # identité, téléphone, mot de passe + vérification
 │   │
 │   ├── (client)/
 │   │   ├── _layout.tsx                   # garde : session + carte(s) ; barre d'onglets
@@ -115,9 +115,10 @@ waffiy/
 │
 ├── supabase/
 │   ├── config.toml
-│   ├── migrations/                       # 0001_types.sql … 0009_seed_policies.sql
+│   ├── migrations/                       # schéma, RLS, fonctions métier et authentification
 │   ├── functions/
-│   │   └── send-push/index.ts            # Edge Function — dispatch Expo Push
+│   │   ├── login-with-phone/index.ts      # alias téléphone → Auth, sans exposer l'email
+│   │   └── send-push/index.ts             # Edge Function — dispatch Expo Push
 │   └── seed.sql                          # jeu de démonstration (Burger House & co.)
 │
 ├── assets/

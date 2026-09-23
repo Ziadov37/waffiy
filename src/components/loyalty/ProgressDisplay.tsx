@@ -8,6 +8,7 @@ export type ProgressDisplayProps = {
   threshold: number;
   /** Compact : pastilles plus petites, pour l'aperçu d'une carte en liste. */
   compact?: boolean;
+  size?: number;
 };
 
 /**
@@ -22,7 +23,12 @@ export type ProgressDisplayProps = {
  * pastilles : un lecteur d'écran annonce « 8 sur 10 visites » au lieu
  * d'énumérer dix cases.
  */
-export function ProgressDisplay({ stamps, threshold, compact = false }: ProgressDisplayProps) {
+export function ProgressDisplay({
+  stamps,
+  threshold,
+  compact = false,
+  size: customSize,
+}: ProgressDisplayProps) {
   const filled = Math.min(stamps, threshold);
   const ready = stamps >= threshold;
   const accent = ready ? colors.reward : colors.primary;
@@ -30,7 +36,7 @@ export function ProgressDisplay({ stamps, threshold, compact = false }: Progress
   const a11y = {
     accessible: true,
     accessibilityRole: 'progressbar' as const,
-    accessibilityLabel: `Progression : ${filled} sur ${threshold} visites`,
+    accessibilityLabel: `Progression : ${filled} sur ${threshold} points`,
     accessibilityValue: { min: 0, max: threshold, now: filled },
   };
 
@@ -45,7 +51,7 @@ export function ProgressDisplay({ stamps, threshold, compact = false }: Progress
     );
   }
 
-  const size = compact ? 18 : 26;
+  const size = customSize ?? (compact ? 22 : 26);
 
   return (
     <View {...a11y} style={styles.dots}>
@@ -59,7 +65,7 @@ export function ProgressDisplay({ stamps, threshold, compact = false }: Progress
               {
                 width: size,
                 height: size,
-                borderRadius: size / 2,
+                borderRadius: Math.max(7, Math.round(size * 0.34)),
                 backgroundColor: on ? accent : colors.white,
                 borderColor: on ? accent : colors.borderInput,
               },
@@ -79,10 +85,10 @@ export function ProgressDisplay({ stamps, threshold, compact = false }: Progress
 
 const styles = StyleSheet.create({
   dots: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  dot: { borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  dot: { borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   check: { color: colors.white, fontSize: 13, lineHeight: 16 },
   barTrack: {
-    height: 12,
+    height: 8,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
     overflow: 'hidden',
